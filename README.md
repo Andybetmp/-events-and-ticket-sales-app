@@ -1,7 +1,7 @@
 # -events-and-ticket-sales-app
 
 #Brief ejecutivo (problema, objetivos, alcance)
-# 1.1.1. Descripción del Problema
+# Descripción del Problema
 
 En la actualidad, la gestión de eventos y venta de entradas presenta múltiples desafíos tanto para organizadores como para asistentes. 
 
