@@ -8,8 +8,8 @@ Write-Host "`n========== TEST E2E - TICKETING SOA ==========" -ForegroundColor C
 Write-Host "`n[1/5] Registrando usuario..." -ForegroundColor Yellow
 $timestamp = Get-Date -Format "HHmmss"
 $registerBody = @{
-    nombre = "Carlos"
-    apellido = "Lopez"
+    nombre = "Freddy"
+    apellido = "Ticona"
     email = "u20202269@utp.edu.pe"
     contrasena = "pass123456"
 }

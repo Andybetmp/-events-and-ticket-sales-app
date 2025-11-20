@@ -31,8 +31,11 @@ public class UserRegistrationOrchestrator {
             // PASO 1: Registrar usuario en user-service
             log.info("PASO 1: Registrando usuario en user-service");
             Map<String, Object> userResponse = userClient.registerUser(userData);
-            String nombre = (String) userResponse.get("nombre");
-            String email = (String) userResponse.get("email");
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> usuario = (Map<String, Object>) userResponse.get("usuario");
+            String nombre = (String) usuario.get("nombre");
+            String email = (String) usuario.get("email");
             log.info("  ✓ Usuario registrado: {} ({})", nombre, email);
 
             // PASO 2: Enviar notificación de bienvenida
@@ -60,7 +63,7 @@ public class UserRegistrationOrchestrator {
         notification.put("destinatario", email);
         
         Map<String, Object> datos = new HashMap<>();
-        datos.put("nombreUsuario", nombre);
+        datos.put("nombre", nombre);
         
         notification.put("datos", datos);
         
