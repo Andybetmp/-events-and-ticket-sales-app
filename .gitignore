@@ -1,0 +1,13 @@
+target/
+**/target/
+.mvn/
+*.log
+*.tmp
+/.idea
+/.vscode
+.DS_Store
+docker-compose.override.yml
+
+# Newman reports
+newman-results.json
+newman/
