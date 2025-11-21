@@ -1,457 +1,101 @@
-# 🎫 SOA Ticketing - Sistema de Venta de Entradas
-
-Sistema completo de venta de entradas basado en arquitectura SOA (Service-Oriented Architecture) con 7 microservicios implementados usando Java + Spring Boot.
-
-## 🏗️ Arquitectura
-
-### Diagrama de Servicios
-
-```
-                           ┌─────────────┐
-                           │   Cliente   │
-                           └──────┬──────┘
-                                  │
-                                  ▼
-                    ┌─────────────────────────┐
-                    │   Gateway :8080         │
-                    │  (JWT + Enrutamiento)   │
-                    └──────┬──────────────────┘
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-          ▼                ▼                ▼
-   Flujos Directos   Flujos Orquestados   Health Checks
-          │                │
-          │                ▼
-          │    ┌──────────────────────┐
-          │    │  Orchestration :8083 │ ◄── Coordina flujos complejos
-          │    │  (Solo coordina)     │     (Saga + Compensación)
-          │    └──────┬───────────────┘
-          │           │
-          │           ├─────────┬─────────┬─────────┬─────────┐
-          │           │         │         │         │         │
-          └───────┬───┴─────────┴─────────┴─────────┴─────────┤
-                  ▼         ▼         ▼         ▼         ▼         ▼
-            ┌─────────┐ ┌────────┐ ┌────────┐ ┌──────────┐ ┌────────┐
-            │  User   │ │ Event  │ │ Ticket │ │ Payment  │ │ Notif  │
-            │  :8081  │ │ :8082  │ │ :8086  │ │  :8084   │ │ :8085  │
-            └────┬────┘ └───┬────┘ └───┬────┘ └────┬─────┘ └───┬────┘
-                 │          │          │           │            │
-                 ▼          ▼          ▼           ▼            ▼
-            ┌──────────────────────────────────────────────────────┐
-            │              MySQL :3306                             │                  
-            └──────────────────────────────────────────────────────┘
-```
-
-### Flujos de Ejemplo
-
-**1. Flujo Directo (Login):**
-```
-Cliente → Gateway → User-Service → BD → Respuesta
-```
-
-**2. Flujo Orquestado (Comprar Ticket - Patrón Saga):**
-```
-Cliente → Gateway → Orchestration-Service
-                         ├→ User-Service (validar usuario)
-                         ├→ Event-Service (validar evento + stock)
-                         ├→ Event-Service (decrementar stock) ◄─┐
-                         ├→ Payment-Service (procesar pago)     │ Compensación
-                         │    └─ Si falla ──────────────────────┘ (rollback)
-                         ├→ Ticket-Service (crear ticket)
-                         └→ Notification-Service (enviar email)
-                    → Respuesta al Cliente
-```
-
-### Microservicios Implementados
-
-- ✅ **Gateway** (puerto 8080): API Gateway con validación JWT centralizada
-- ✅ **user-service** (puerto 8081): Autenticación JWT, gestión de usuarios, logout
-- ✅ **event-service** (puerto 8082): CRUD de eventos y tipos de entrada
-- ✅ **orchestration-service** (puerto 8083): Orquestación con patrón Saga (sin lógica de negocio)
-- ✅ **payment-service** (puerto 8084): Mock de pasarela de pago
-- ✅ **notification-service** (puerto 8085): Emails reales vía Gmail SMTP con fallback a logs
-- ✅ **ticket-service** (puerto 8086): Gestión de tickets y CRUD completo
-
-## 🚀 Tecnologías
-
-- **Backend**: Java 17, Spring Boot 3.1.4 - 3.2.12
-- **Arquitectura**: Microservicios con patrón Saga (compensación automática)
-- **Seguridad**: Spring Security + JWT (validación en Gateway)
-- **Gateway**: Spring Cloud Gateway 4.0.7
-- **Base de Datos**: MySQL 8.0 (XAMPP)
-- **ORM**: Spring Data JPA + Hibernate
-- **Email**: Spring Mail + Gmail SMTP
-- **Documentación API**: Springdoc OpenAPI (Swagger UI)
-- **Async Processing**: @EnableAsync para notificaciones
-- **RestTemplate**: Comunicación entre microservicios
-
-## 📦 Estructura del Proyecto
-
-```
-SOA/
-├── gateway/                # API Gateway (puerto 8080)
-│   ├── controller/         # Health endpoints
-│   ├── filter/            # Filtro JWT global
-│   └── service/           # Validación de tokens
-├── user-service/          # Autenticación y usuarios (puerto 8081)
-│   ├── model/             # Entidad User
-│   ├── repository/        # UserRepository
-│   ├── service/           # AuthService, UserService
-│   ├── controller/        # Registro, login, logout, CRUD
-│   ├── config/            # Security, JWT, GatewayAuthFilter
-│   └── resources/
-│       └── db/migration/  # Scripts Flyway
-├── event-service/         # Gestión de eventos (puerto 8082)
-│   ├── model/             # Evento, TipoEntrada
-│   ├── repository/        # Repositorios JPA
-│   ├── service/           # Lógica de negocio
-│   └── controller/        # CRUD eventos y tipos de entrada
-├── orchestration-service/ # Orquestador Saga (puerto 8083)
-│   ├── orchestrator/      # TicketPurchaseOrchestrator, EventCreationOrchestrator
-│   ├── client/            # Clientes REST a otros servicios
-│   └── controller/        # Register, create-event, purchase-ticket, my-tickets
-├── payment-service/       # Pasarela de pago mock (puerto 8084)
-│   ├── model/             # Payment
-│   ├── service/           # PaymentService (rechaza monto > 1000)
-│   └── controller/        # POST /api/payments/authorize
-├── notification-service/  # Emails + Logs (puerto 8085)
-│   ├── service/           # NotificationService (Gmail SMTP + fallback)
-│   ├── controller/        # POST /api/notifications/send
-│   └── resources/
-│       └── application.properties  # Config Gmail SMTP
-├── ticket-service/        # Gestión de tickets (puerto 8086)
-│   ├── model/             # Ticket
-│   ├── repository/        # TicketRepository
-│   ├── service/           # TicketService
-│   ├── controller/        # CRUD tickets
-│   └── dto/               # CreateTicketRequest, TicketResponse
-├── start-services.ps1     # Inicia todos los servicios como jobs
-├── stop-services.ps1      # Detiene todos los servicios
-├── test-e2e.ps1          # Prueba end-to-end completa
-└── pom.xml               # POM padre multi-módulo
-```
-
-## 🚀 Inicio Rápido
-
-Existen **2 formas** de ejecutar el sistema:
-
-### Opción 1: Docker Compose (Recomendado) 🐳
-
-**Ventajas:** Setup automático, un solo comando, portátil.
-
-```bash
-# 1. Compilar todos los servicios
-.\build-docker.ps1
-
-# 2. Ver logs
-docker-compose logs -f
-
-# 3. Detener
-docker-compose down
-```
-
-**Ver documentación completa:** [DOCKER.md](DOCKER.md)
-
-### Opción 2: Ejecución Local (XAMPP + PowerShell)
-
-**Ventajas:** Control directo, debugging fácil.
-
-#### Pre-requisitos
-
-1. **Java 17** instalado - Verifica: `java -version`
-2. **Maven** instalado - Verifica: `mvn -version`
-3. **MySQL** corriendo en XAMPP (puerto 3306, usuario: `root`, password: `root`)
-
-#### Iniciar Todos los Servicios
-
-```powershell
-cd 'd:\Tareas de programacion\SOA'
-.\start-services.ps1
-```
-
-El script:
-- Inicia los 7 servicios como PowerShell background jobs
-- Orden: user → event → orchestration → payment → notification → ticket → gateway
-- Verifica que los 7 puertos estén escuchando (8080-8086)
-
-### Verificar que Todo Funciona
-
-```powershell
-.\test-e2e.ps1
-```
-
-Esto ejecuta un flujo completo:
-1. Registro de usuario → Email de bienvenida
-2. Login → Token JWT
-3. Creación de evento → Email de evento creado
-4. Compra de ticket → Email de confirmación
-5. Consulta de tickets del usuario
-
-### Detener Todos los Servicios
-
-```powershell
-.\stop-services.ps1
-```
-
-## 🌐 URLs de los Servicios
-
-| Servicio | URL | Swagger |
-|----------|-----|---------|
-| Gateway | http://localhost:8080 | - |
-| User Service | http://localhost:8081 | http://localhost:8081/swagger-ui.html |
-| Event Service | http://localhost:8082 | http://localhost:8082/swagger-ui.html |
-| Orchestration | http://localhost:8083 | http://localhost:8083/swagger-ui.html |
-| Payment | http://localhost:8084 | http://localhost:8084/swagger-ui.html |
-| Notification | http://localhost:8085 | http://localhost:8085/swagger-ui.html |
-| Ticket | http://localhost:8086 | http://localhost:8086/swagger-ui.html |
-
-**⚠️ Importante**: Siempre acceder a través del Gateway (puerto 8080), no directamente a los servicios.
-
-## 📝 Funcionalidades Principales
-
-### 1. Autenticación y Autorización
-- Registro de usuarios con validación de datos
-- Login con JWT (expiración 24h)
-- Logout (invalidación del lado del cliente)
-- Middleware de autenticación en Gateway
-- Validación de header secreto entre servicios
-
-### 2. Gestión de Eventos
-- CRUD completo de eventos
-- Gestión de tipos de entrada (VIP, General, etc.)
-- Control de stock disponible
-- Incremento/decremento de cantidad con compensación
-
-### 3. Compra de Tickets (Patrón Saga)
-- **Orquestación completa** del proceso de compra
-- **Orchestration-service NO tiene lógica de negocio**, solo coordina servicios
-- **Comunicación vía REST**: Orchestrator → TicketServiceClient → HTTP → Ticket-Service
-- **Compensación automática**: Si el pago falla, se restaura el stock
-- **Timeout de 30 segundos** para el procesamiento de pago
-- **Flujo**: Verificar stock → Decrementar → Procesar pago → Crear ticket (via REST)
-- **Rollback**: Si falla, ejecuta `increaseCantidad()` para restaurar
-
-### 4. Procesamiento de Pagos
-- Mock de pasarela de pago
-- Rechaza automáticamente montos > $1000
-- Genera payment_id único
-- Registra todos los intentos en base de datos
-
-### 5. Sistema de Notificaciones
-- **Emails reales** vía Gmail SMTP (configurable)
-- **Fallback a logs** si SMTP falla o no está configurado
-- **3 tipos de notificaciones**:
-  - BIENVENIDA: Al registrarse
-  - EVENTO_CREADO: Al crear un evento
-  - TICKET_COMPRADO: Al comprar entradas
-- **Procesamiento asíncrono** con @Async
-
-## 🔐 Seguridad
-
-### Flujo de Autenticación
-
-```
-Cliente → Gateway (valida JWT) → Servicio (valida X-Gateway-Secret)
-```
-
-1. Cliente envía JWT en header `Authorization: Bearer <token>`
-2. Gateway valida el token y extrae el email del usuario
-3. Gateway añade headers:
-   - `X-Gateway-Secret`: Secreto compartido
-   - `X-User-Email`: Email extraído del JWT
-4. Servicio valida el header secreto y confía en X-User-Email
-
-### Características de Seguridad
-- Contraseñas hasheadas con BCrypt
-- Tokens JWT firmados con HMAC-SHA256
-- Acceso directo a servicios bloqueado (solo via Gateway)
-- Header secreto compartido entre Gateway y servicios
-- CORS configurado en Gateway
-
-## 🗄️ Base de Datos
-
-### Bases de Datos
-
-El sistema utiliza MySQL con separación de bases de datos por servicio:
-
-**`ticketing`** - Base de datos compartida (user, event, payment):
-- `users` - Autenticación y perfiles de usuario
-- `eventos` - Información de eventos
-- `tipos_entrada` - Tipos de entrada por evento (VIP, General, etc.)
-- `payments` - Registro de todos los intentos de pago
-
-**`ticket_db`** - Base de datos exclusiva (ticket-service):
-- `tickets` - Tickets comprados por usuarios
-
-**`orchestration_db`** - Base de datos mínima (orchestration-service):
-- No se utiliza - El orchestrator solo coordina servicios vía REST
-
-### Tablas principales
-
-#### `users` (user-service)
-- id, email, contrasena, nombre, apellido, telefono, rol, activo
-- Gestiona autenticación y perfiles de usuario
-
-#### `eventos` (event-service)
-- id, nombre, descripcion, fecha_evento, ubicacion, categoria
-- Almacena información de eventos
-
-#### `tipos_entrada` (event-service)
-- id, evento_id, nombre, precio, cantidad_disponible
-- Define tipos de entrada por evento (VIP, General, etc.)
-
-#### `tickets` (ticket-service)
-- id, ticket_id, usuario_id, tipo_entrada_id, evento_nombre, cantidad, total_pagado, payment_id
-- Registra tickets comprados por usuarios
-
-#### `payments` (payment-service)
-- id, payment_id, monto, status, card_last_four, mensaje
-- Registra todos los intentos de pago
-
-**Configuración:**
-- Host: localhost:3306
-- Usuario: root
-- Contraseña: root
-- Las tablas se crean automáticamente con Hibernate (`ddl-auto=create` o `validate`)
-
-## ⚙️ Configuración
-
-### Configurar Emails con Gmail
-
-Para enviar emails reales, edita `notification-service/src/main/resources/application.properties`:
-
-1. **Activa verificación en 2 pasos** en tu Gmail:
-   - https://myaccount.google.com/security
-
-2. **Genera contraseña de aplicación**:
-   - https://myaccount.google.com/apppasswords
-   - Nombre: "SOA Notification Service"
-   - Copia la contraseña de 16 caracteres
-
-3. **Actualiza application.properties**:
-```properties
-spring.mail.username=tu_email@gmail.com
-spring.mail.password=xxxx xxxx xxxx xxxx
-```
-
-4. **Recompila y reinicia** notification-service
-
-Si no configuras Gmail, los emails se simulan en logs (fallback automático).
-
-### Variables de Entorno Importantes
-
-**Gateway** (`gateway.secret`):
-- Secreto compartido: `soa-gateway-secret-key-2024`
-- Debe ser igual en Gateway y todos los servicios
-
-**JWT** (`jwt.secret`):
-- Clave de firma para tokens JWT
-- Por defecto: `mysecretkeymysecretkeymysecretkeymysecretkey`
-- Expiración: 24 horas (86400000 ms)
-
-## 📋 Estado del Proyecto
-
-### Completado ✅
-
-- [x] **Gateway** con validación JWT centralizada
-- [x] **User Service** - Registro, login, logout, CRUD usuarios
-- [x] **Event Service** - CRUD eventos y tipos de entrada
-- [x] **Orchestration Service** - Patrón Saga con compensación (solo coordina, sin lógica de negocio)
-- [x] **Payment Service** - Mock de pasarela (rechaza > $1000)
-- [x] **Notification Service** - Gmail SMTP + fallback a logs
-- [x] **Ticket Service** - Gestión independiente de tickets con BD propia
-- [x] **Comunicación entre servicios** - RestTemplate + REST clients + headers de seguridad
-- [x] **Prueba E2E** - Script PowerShell con flujo completo
-- [x] **Scripts de inicio/parada** - start-jobs.ps1, stop-services.ps1
-
-### Funcionalidades Implementadas ✅
-
-- [x] Autenticación JWT con expiración de 24h
-- [x] Logout (invalidación del lado del cliente)
-- [x] Compensación Saga (rollback automático si falla el pago)
-- [x] Separación correcta: Orchestration coordina, Ticket-Service maneja lógica de negocio
-- [x] Clientes REST (UserServiceClient, EventServiceClient, PaymentServiceClient, NotificationServiceClient, TicketServiceClient)
-- [x] Database per Service: ticket_db para ticket-service
-- [x] Timeout de 30s en procesamiento de pago
-- [x] Emails reales vía Gmail SMTP con fallback a logs
-- [x] 3 tipos de notificaciones (bienvenida, evento creado, ticket comprado)
-- [x] Procesamiento asíncrono de emails
-- [x] Validación de header secreto entre Gateway y servicios
-- [x] Swagger UI en todos los servicios
-- [x] Gestión de stock con incremento/decremento compensado
-
-### Pendiente ⏳
-
-- [ ] Colección Postman con tests automatizados
-- [ ] Observabilidad (Actuator + Prometheus + Grafana)
-- [ ] Docker Compose para todos los servicios
-- [ ] CI/CD pipeline
-- [ ] Tests unitarios y de integración
-
-## 🐛 Solución de Problemas
-
-### Servicios no inician
-
-**Verificar que MySQL esté corriendo:**
-```powershell
-Get-Process mysqld -ErrorAction SilentlyContinue
-```
-Si no aparece, inicia XAMPP y arranca MySQL.
-
-**Ver qué puertos están ocupados:**
-```powershell
-Get-NetTCPConnection -LocalPort 8080,8081,8082,8083,8084,8085,8086 -State Listen
-```
-
-**Detener todos los servicios Java:**
-```powershell
-Get-Process java | Where-Object { $_.Path -notlike "*redhat.java*" } | Stop-Process -Force
-```
-
-### Error: "Authentication failed" en emails
-
-Si ves errores de autenticación SMTP en notification-service:
-1. Verifica que la contraseña de aplicación de Gmail sea correcta
-2. Asegúrate de que la verificación en 2 pasos esté activada
-3. El sistema usa fallback automático a logs si SMTP falla
-
-### Compensación Saga no funciona
-
-Si el stock no se restaura cuando el pago falla:
-1. Verifica los logs de orchestration-service (busca "COMPENSACIÓN")
-2. Asegúrate de que event-service tenga el endpoint PUT /{id}/incrementar
-3. Revisa que eventClient esté configurado correctamente
-
-### Gateway devuelve 404
-
-Si el Gateway no encuentra las rutas:
-1. Verifica que el servicio destino esté corriendo
-2. Revisa gateway/src/main/resources/application.yml
-3. Asegúrate de que todos los servicios hayan iniciado correctamente
-
-## 📚 Recursos Adicionales
-
-- [Spring Boot Documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/)
-- [Spring Cloud Gateway](https://spring.io/projects/spring-cloud-gateway)
-- [Spring Security](https://docs.spring.io/spring-security/reference/)
-- [Patrón Saga](https://microservices.io/patterns/data/saga.html)
-- [JWT.io](https://jwt.io/) - Debugger de tokens JWT
-
-## 👥 Equipo
-
-Proyecto académico - Sistema de Venta de Entradas SOA
-
-**Características principales del proyecto:**
-- 7 microservicios independientes
-- Patrón Saga con compensación automática
-- Separación correcta: Orchestration coordina, servicios manejan su lógica de negocio
-- Gateway centralizado con JWT
-- Emails reales con Gmail SMTP
-- Sistema completo de compra de tickets
+# -events-and-ticket-sales-app
+
+#Brief ejecutivo (problema, objetivos, alcance)
+# Descripción del Problema
+
+En la actualidad, la gestión de eventos y venta de entradas presenta múltiples desafíos tanto para organizadores como para asistentes. 
+
+## Problemas para organizadores:
+- **Gestión fragmentada:** Uso de herramientas separadas para crear eventos, vender entradas, gestionar asistentes y generar reportes.
+- **Falta de integración:** Sistemas aislados que no se comunican entre sí, generando duplicación de datos y procesos ineficientes.
+- **Escalabilidad limitada:** Soluciones que no pueden adaptarse al crecimiento del negocio o picos de demanda.
+- **Control de acceso deficiente:** Dificultades para validar entradas y controlar el acceso a eventos.
+- **Reporting insuficiente:** Falta de herramientas analíticas para tomar decisiones basadas en datos.
+
+## Problemas para usuarios finales:
+- **Experiencia de usuario fragmentada:** Procesos de compra deficientes.
+- **Falta de información centralizada:** Dificultad para encontrar eventos relevantes.
+- **Problemas de pago:** Limitadas opciones de pago y procesos inseguros.
+- **Gestión de entradas:** Dificultades para acceder, transferir o gestionar entradas adquiridas.
 
 ---
 
-✅ **Sistema funcional y probado**
+# Planteamiento de Alternativas de Solución
 
-Última actualización: 2025-11-21
+## Aplicación web
+
+Para un sistema de gestión de eventos y venta de entradas basado en Arquitectura Orientada a Servicios (SOA), una aplicación web resulta especialmente adecuada. Permite que los usuarios (asistentes, organizadores y administradores) accedan al sistema desde cualquier dispositivo con navegador, facilitando la publicación de eventos, la consulta de disponibilidad y la compra de entradas sin instalaciones previas.
+
+En un enfoque SOA, los componentes (servicios de catálogo de eventos, pasarela de pagos, gestión de usuarios, notificaciones) se exponen como APIs que la capa web consume, lo que acelera la integración y el despliegue continuo. Además, el mantenimiento y las actualizaciones se realizan de forma centralizada en el servidor, lo que simplifica la gestión operativa de un sistema que debe estar disponible en picos de demanda (ventas masivas en preventa).
+
+**Limitaciones:** La experiencia de uso y ciertas funciones críticas (por ejemplo, ventas en zonas con mala conectividad) pueden verse limitadas por la dependencia de internet y por variaciones en el rendimiento según el navegador.
+
+### Ventajas:
+- Accesibilidad inmediata desde cualquier dispositivo con navegador (usuarios y organizadores).
+- Facilita la integración y consumo de servicios SOA/REST (pagos, inventario de asientos, reportes).
+- Mantenimiento y despliegue centralizados (útil para corregir errores rápidamente durante eventos).
+- Escalabilidad para soportar picos de tráfico (preventas y lanzamientos).
+- Mejora del posicionamiento y descubrimiento de eventos vía SEO.
+
+## Aplicación móvil
+
+Una aplicación móvil nativa puede complementar o ser alternativa a la web para mejorar la experiencia de asistentes y organizadores. En el contexto de ventas de entradas, una app nativa permite notificaciones push para anunciar preventas, recordatorios y promociones; además puede integrar de forma directa funciones del dispositivo (cámara para escanear códigos QR, geolocalización para eventos cercanos, almacenamiento local para entradas offline).
+
+Si el sistema basado en SOA expone servicios bien documentados, la app móvil consumirá esos servicios de forma eficiente. No obstante, el desarrollo y mantenimiento de apps nativas para múltiples plataformas (iOS/Android) incrementa costos y proceso de actualización (tiempos de aprobación en tiendas), lo que hay que justificar por el valor añadido (p. ej. fidelización de usuarios frecuentes o acceso offline avanzado).
+
+### Ventajas:
+- Experiencia de usuario más fluida y optimizada para interacción durante el evento.
+- Notificaciones push para engagement (preventas, cambios de horario, promociones).
+- Integración con hardware del dispositivo (cámara para escaneo QR, geolocalización).
+- Mejor soporte para funcionalidades offline parciales (guardar entradas en caché).
+
+## Aplicación de escritorio
+
+Las aplicaciones de escritorio suelen ser apropiadas para módulos administrativos o de gestión interna dentro del proyecto, por ejemplo, herramientas avanzadas para administración de eventos, generación de reportes masivos, o control de accesos en el backend del organizador.
+
+Ofrecen rendimiento y capacidad de procesamiento superiores para operaciones complejas (exportes, análisis) y trabajo offline completo cuando se requiera. Sin embargo, no son la mejor opción para la interacción del público general por su baja portabilidad y la necesidad de instalar software específico en cada equipo; por ello, en un sistema SOA su uso suele limitarse a clientes administrativos o kioscos locales.
+
+### Ventajas:
+- Rendimiento óptimo para tareas administrativas complejas y análisis de datos.
+- Funcionalidad offline completa para entornos controlados (p. ej. taquillas en recintos sin conexión fiable).
+- Interfaz y flujos familiares para usuarios corporativos (staff de producción y finanzas).
+
+---
+
+# 1.2. Definición de Objetivos
+
+## 1.2.1. Objetivo General
+
+Diseñar e implementar un sistema integral de gestión de eventos y venta de entradas basado en Arquitectura Orientada a Servicios (SOA) que permita a organizadores crear y administrar eventos de manera eficiente, mientras proporciona a los usuarios finales una plataforma intuitiva para descubrir, comprar y gestionar entradas digitales.
+
+## 1.2.2. Objetivos Específicos
+
+- Analizar los requerimientos funcionales y no funcionales del sistema de gestión de eventos identificando las necesidades específicas de organizadores y usuarios finales.
+- Diseñar una arquitectura SOA robusta que garantice la modularidad, escalabilidad y reutilización de servicios para el sistema de gestión de eventos.
+- Implementar servicios especializados para la gestión de eventos, usuarios, pagos, notificaciones y reportes siguiendo los principios de SOA.
+- Desarrollar una interfaz web responsiva que proporcione una experiencia de usuario intuitiva tanto para organizadores como para compradores de entradas.
+- Integrar servicios de terceros como pasarelas de pago, servicios de correo electrónico y sistemas de notificaciones para enriquecer la funcionalidad del sistema.
+- Implementar mecanismos de seguridad apropiados para proteger la información sensible de usuarios y transacciones financieras.
+- Realizar pruebas exhaustivas del sistema para validar el correcto funcionamiento de todos los servicios y la integración entre componentes.
+- Documentar la arquitectura y servicios desarrollados para facilitar el mantenimiento y futuras extensiones del sistema.
+
+## 1.2.3. Alcances y Limitaciones
+
+### Alcances:
+- Gestión completa de eventos: creación, modificación, cancelación y reportes de eventos.
+- Sistema de venta de entradas: compra, pago y entrega digital de entradas.
+- Gestión de usuarios: registro, autenticación y perfiles de organizadores y compradores.
+- Integración de pagos: procesamiento seguro de transacciones financieras.
+- Panel de administración: herramientas completas para organizadores.
+- Notificaciones automatizadas: sistema de comunicación con usuarios.
+- Reportes y analytics: generación de informes de ventas y asistencia.
+- Aplicación web responsiva: compatible con dispositivos móviles y desktop.
+
+### Limitaciones:
+- Plataforma única: solo implementación web, sin aplicaciones móviles nativas.
+- Idioma: sistema desarrollado únicamente en español.
+- Pagos: integración limitada a pasarelas de pago específicas disponibles en Perú.
+- Geolocalización: enfocado principalmente en el mercado peruano.
+- Capacidad: sistema diseñado para eventos de hasta 10,000 asistentes.
+- Tipos de evento: limitado a eventos presenciales (no virtuales o híbridos).
+- Integración externa: limitada a servicios específicos identificados en el análisis.
