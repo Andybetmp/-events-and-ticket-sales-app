@@ -3,7 +3,7 @@ Write-Host "══════════════════════�
 Write-Host "INICIANDO SERVICIOS SOA" -ForegroundColor Cyan
 Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
 
-$basePath = "d:\Tareas de programacion\SOA"
+$basePath = "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\"
 
 Write-Host "`nIniciando servicios como Jobs en PowerShell..." -ForegroundColor Yellow
 Write-Host "Los logs estarán disponibles en archivos .log`n" -ForegroundColor Gray
@@ -18,49 +18,49 @@ Start-Sleep -Seconds 2
 # Iniciar cada servicio como Job
 Write-Host "[1/7] Iniciando user-service (puerto 8081)..." -ForegroundColor Cyan
 Start-Job -Name "user-service" -ScriptBlock {
-    Set-Location "d:\Tareas de programacion\SOA\user-service"
+    Set-Location "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\user-service"
     java -jar target\user-service-0.0.1-SNAPSHOT.jar 2>&1 | Tee-Object -FilePath "..\logs\user-service.log"
 } | Out-Null
 Start-Sleep -Seconds 12
 
 Write-Host "[2/7] Iniciando event-service (puerto 8082)..." -ForegroundColor Cyan
 Start-Job -Name "event-service" -ScriptBlock {
-    Set-Location "d:\Tareas de programacion\SOA\event-service"
+    Set-Location "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\event-service"
     java -jar target\event-service-0.0.1-SNAPSHOT.jar 2>&1 | Tee-Object -FilePath "..\logs\event-service.log"
 } | Out-Null
 Start-Sleep -Seconds 12
 
 Write-Host "[3/7] Iniciando orchestration-service (puerto 8083)..." -ForegroundColor Cyan
 Start-Job -Name "orchestration-service" -ScriptBlock {
-    Set-Location "d:\Tareas de programacion\SOA\orchestration-service"
+    Set-Location "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\orchestration-service"
     java -jar target\orchestration-service-0.0.1-SNAPSHOT.jar 2>&1 | Tee-Object -FilePath "..\logs\orchestration-service.log"
 } | Out-Null
 Start-Sleep -Seconds 12
 
 Write-Host "[4/7] Iniciando payment-service (puerto 8084)..." -ForegroundColor Cyan
 Start-Job -Name "payment-service" -ScriptBlock {
-    Set-Location "d:\Tareas de programacion\SOA\payment-service"
+    Set-Location "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\payment-service"
     java -jar target\payment-service-0.0.1-SNAPSHOT.jar 2>&1 | Tee-Object -FilePath "..\logs\payment-service.log"
 } | Out-Null
 Start-Sleep -Seconds 12
 
 Write-Host "[5/7] Iniciando notification-service (puerto 8085)..." -ForegroundColor Cyan
 Start-Job -Name "notification-service" -ScriptBlock {
-    Set-Location "d:\Tareas de programacion\SOA\notification-service"
+    Set-Location "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\notification-service"
     java -jar target\notification-service-0.0.1-SNAPSHOT.jar 2>&1 | Tee-Object -FilePath "..\logs\notification-service.log"
 } | Out-Null
 Start-Sleep -Seconds 12
 
 Write-Host "[6/7] Iniciando ticket-service (puerto 8086)..." -ForegroundColor Cyan
 Start-Job -Name "ticket-service" -ScriptBlock {
-    Set-Location "d:\Tareas de programacion\SOA\ticket-service"
+    Set-Location "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\ticket-service"
     java -jar target\ticket-service-0.0.1-SNAPSHOT.jar 2>&1 | Tee-Object -FilePath "..\logs\ticket-service.log"
 } | Out-Null
 Start-Sleep -Seconds 12
 
 Write-Host "[7/7] Iniciando gateway (puerto 8080)..." -ForegroundColor Cyan
 Start-Job -Name "gateway" -ScriptBlock {
-    Set-Location "d:\Tareas de programacion\SOA\gateway"
+    Set-Location "C:\Users\pc\Documents\-events-and-ticket-sales-app-main\Services\gateway"
     java -jar target\gateway-0.0.1-SNAPSHOT.jar 2>&1 | Tee-Object -FilePath "..\logs\gateway.log"
 } | Out-Null
 Start-Sleep -Seconds 12
