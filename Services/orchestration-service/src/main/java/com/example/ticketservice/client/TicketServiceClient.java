@@ -108,4 +108,73 @@ public class TicketServiceClient {
             throw new RuntimeException("Error al obtener tickets: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Crea una reserva temporal de entradas (decrementa stock por 10 minutos)
+     */
+    public Map<String, Object> crearReserva(Long tipoEntradaId, Long usuarioId, Integer cantidad) {
+        String url = serviceUrls.getTicketService().getUrl() + "/api/reservas/crear";
+        
+        Map<String, Object> request = new HashMap<>();
+        request.put("tipoEntradaId", tipoEntradaId);
+        request.put("usuarioId", usuarioId);
+        request.put("cantidad", cantidad);
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Gateway-Secret", gatewaySecret);
+        
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            log.info("Reserva creada exitosamente: {}", response.getBody());
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Error al crear reserva: {}", e.getMessage());
+            throw new RuntimeException("Error al crear reserva: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Confirma una reserva después de un pago exitoso
+     */
+    public Map<String, Object> confirmarReserva(Long reservaId) {
+        String url = serviceUrls.getTicketService().getUrl() + "/api/reservas/" + reservaId + "/confirmar";
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Gateway-Secret", gatewaySecret);
+        
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.PUT, entity, Map.class);
+            log.info("Reserva confirmada exitosamente");
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Error al confirmar reserva {}: {}", reservaId, e.getMessage());
+            throw new RuntimeException("Error al confirmar reserva: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Libera una reserva y restaura el stock
+     */
+    public Map<String, Object> liberarReserva(Long reservaId) {
+        String url = serviceUrls.getTicketService().getUrl() + "/api/reservas/" + reservaId + "/liberar";
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Gateway-Secret", gatewaySecret);
+        
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.PUT, entity, Map.class);
+            log.info("Reserva liberada exitosamente");
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Error al liberar reserva {}: {}", reservaId, e.getMessage());
+            throw new RuntimeException("Error al liberar reserva: " + e.getMessage(), e);
+        }
+    }
 }

@@ -14,6 +14,9 @@ public class Payment {
     @Column(name = "payment_id", unique = true, nullable = false, length = 50)
     private String paymentId;
 
+    @Column(name = "idempotency_key", unique = true, length = 100)
+    private String idempotencyKey; // NEW: For idempotency checks
+
     @Column(nullable = false)
     private Double monto;
 
@@ -38,8 +41,9 @@ public class Payment {
     public Payment() {
     }
 
-    public Payment(String paymentId, Double monto, String status, String cardLastFour, String mensaje) {
+    public Payment(String paymentId, String idempotencyKey, Double monto, String status, String cardLastFour, String mensaje) {
         this.paymentId = paymentId;
+        this.idempotencyKey = idempotencyKey;
         this.monto = monto;
         this.status = status;
         this.cardLastFour = cardLastFour;
@@ -61,6 +65,14 @@ public class Payment {
 
     public void setPaymentId(String paymentId) {
         this.paymentId = paymentId;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
     }
 
     public Double getMonto() {

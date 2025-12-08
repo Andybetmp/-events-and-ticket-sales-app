@@ -51,6 +51,19 @@ public class Event {
     @Column(length = 100)
     private String categoria;
 
+    @Column(name = "organizador_id")
+    private Long organizadorId;
+
+    @Column(length = 200)
+    private String organizador;
+
+    @Column(name = "imagen_url", length = 500)
+    private String imagenUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private EstadoEvento estado;
+
     @Column(nullable = false)
     private Boolean activo;
 
@@ -66,6 +79,9 @@ public class Event {
     public void prePersist() {
         if (activo == null) {
             activo = true;
+        }
+        if (estado == null) {
+            estado = EstadoEvento.ACTIVO;
         }
         // Las entradas disponibles se calculan desde los tipos de entrada
         calcularEntradasDisponibles();
@@ -95,5 +111,11 @@ public class Event {
     public void removeTipoEntrada(TipoEntrada tipoEntrada) {
         tiposEntrada.remove(tipoEntrada);
         tipoEntrada.setEvento(null);
+    }
+
+    public enum EstadoEvento {
+        ACTIVO,
+        CANCELADO,
+        FINALIZADO
     }
 }

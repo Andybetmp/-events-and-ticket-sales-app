@@ -31,16 +31,24 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Endpoints públicos
                         .requestMatchers(
                                 new AntPathRequestMatcher("/api/users/register"),
                                 new AntPathRequestMatcher("/api/users/login"),
                                 new AntPathRequestMatcher("/api/users/health"),
+                                new AntPathRequestMatcher("/api/users/email/**"), // Para orchestrator
                                 new AntPathRequestMatcher("/api-docs/**"),
                                 new AntPathRequestMatcher("/swagger-ui/**"),
                                 new AntPathRequestMatcher("/swagger-ui.html"),
                                 new AntPathRequestMatcher("/v3/api-docs/**"),
                                 new AntPathRequestMatcher("/h2-console/**")
                         ).permitAll()
+                        // Solo ADMIN puede gestionar usuarios
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/api/users", "GET"),
+                                new AntPathRequestMatcher("/api/users/**", "DELETE")
+                        ).hasAuthority("ADMIN")
+                        // Usuarios autenticados pueden ver su perfil y actualizarlo
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable())) // For H2 console

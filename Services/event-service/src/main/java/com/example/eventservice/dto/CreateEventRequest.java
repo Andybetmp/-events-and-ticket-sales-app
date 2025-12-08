@@ -43,6 +43,16 @@ public class CreateEventRequest {
     @Schema(description = "Categoría del evento", example = "Música", required = true)
     private String categoria;
 
+    @Schema(description = "ID del usuario organizador", example = "1")
+    private Long organizadorId;
+
+    @Schema(description = "Nombre del organizador", example = "Juan Pérez")
+    private String organizador;
+
+    @Size(max = 500, message = "La URL de la imagen no puede exceder 500 caracteres")
+    @Schema(description = "URL de la imagen del evento", example = "http://localhost:8087/uploads/imagen.jpg")
+    private String imagenUrl;
+
     @NotNull(message = "Los tipos de entrada son requeridos")
     @NotEmpty(message = "Debe incluir al menos un tipo de entrada")
     @Valid

@@ -2,6 +2,7 @@ package com.example.ticketservice.orchestrator;
 
 import com.example.ticketservice.client.EventServiceClient;
 import com.example.ticketservice.client.NotificationServiceClient;
+import com.example.ticketservice.client.UserServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +22,30 @@ public class EventCreationOrchestrator {
     @Autowired
     private NotificationServiceClient notificationClient;
 
+    @Autowired
+    private UserServiceClient userClient;
+
     public Map<String, Object> orchestrateEventCreation(String userEmail, Map<String, Object> eventData) {
         log.info("═══════════════════════════════════════════════════════════");
         log.info("INICIANDO ORQUESTACIÓN DE CREACIÓN DE EVENTO");
         log.info("Creado por: {}", userEmail);
+        log.info("EventData recibido: {}", eventData);
         log.info("═══════════════════════════════════════════════════════════");
 
         try {
+            // PASO 0: Obtener información del usuario
+            log.info("PASO 0: Obteniendo información del usuario organizador");
+            Map<String, Object> usuario = userClient.getUserByEmail(userEmail);
+            Long organizadorId = ((Number) usuario.get("id")).longValue();
+            String nombreCompleto = usuario.get("nombre") + " " + usuario.get("apellido");
+            log.info("  ✓ Organizador: {} (ID: {})", nombreCompleto, organizadorId);
+
+            // Agregar organizador al eventData
+            eventData.put("organizadorId", organizadorId);
+            eventData.put("organizador", nombreCompleto);
+            
+            log.info("EventData antes de enviar a event-service: {}", eventData);
+
             // PASO 1: Crear evento en event-service
             log.info("PASO 1: Creando evento en event-service");
             Map<String, Object> eventResponse = eventClient.createEvento(eventData);

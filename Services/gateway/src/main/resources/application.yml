@@ -79,15 +79,18 @@ spring:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
         
-        # User CRUD - Listar todos los usuarios (requiere JWT)
+        # User CRUD - Listar todos los usuarios (solo ADMIN)
         - id: user-list
           uri: http://localhost:8081
           predicates:
-            - Path=/api/users
+            - Path=/api/usuarios
             - Method=GET
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
+            - name: RoleAuthorizationFilter
+              args:
+                roles: ADMIN
         
         # User CRUD - Obtener usuario por ID (requiere JWT)
         - id: user-get-by-id
@@ -109,7 +112,7 @@ spring:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
         
-        # User CRUD - Eliminar usuario (requiere JWT)
+        # User CRUD - Eliminar usuario (solo ADMIN)
         - id: user-delete
           uri: http://localhost:8081
           predicates:
@@ -118,6 +121,9 @@ spring:
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
+            - name: RoleAuthorizationFilter
+              args:
+                roles: ADMIN
         
         # User Service Swagger
         - id: user-swagger-ui
@@ -301,6 +307,39 @@ spring:
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
         
+        # Image Service Routes
+        - id: image-upload
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/images/upload
+            - Method=POST
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        - id: image-delete
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/images/{fileName}
+            - Method=DELETE
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        - id: image-serve
+          uri: http://localhost:8087
+          predicates:
+            - Path=/uploads/**
+            - Method=GET
+        
+        - id: image-health
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/images/health
+            - Method=GET
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+        
         # Notification Service Routes
         - id: notification-health
           uri: http://localhost:8085
@@ -326,6 +365,7 @@ spring:
             - Path=/api/orchestration/register
             - Method=POST
           filters:
+            - RewritePath=/api/orchestration/register, /api/camunda/register
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
         
         # Crear evento con notificación (requiere JWT)
@@ -335,6 +375,7 @@ spring:
             - Path=/api/orchestration/create-event
             - Method=POST
           filters:
+            - RewritePath=/api/orchestration/create-event, /api/camunda/create-event
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
         
@@ -345,6 +386,7 @@ spring:
             - Path=/api/orchestration/purchase-ticket
             - Method=POST
           filters:
+            - RewritePath=/api/orchestration/purchase-ticket, /api/camunda/purchase-ticket
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
         
@@ -353,6 +395,36 @@ spring:
           uri: http://localhost:8083
           predicates:
             - Path=/api/orchestration/my-tickets
+            - Method=GET
+          filters:
+            - RewritePath=/api/orchestration/my-tickets, /api/camunda/my-tickets
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        # Camunda Service Routes (BPMN Workflows)
+        - id: camunda-health
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/camunda/health
+            - Method=GET
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+        
+        # Comprar ticket via Camunda workflow (requiere JWT + headers X-User-ID y X-User-Email)
+        - id: camunda-purchase-ticket
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/camunda/purchase-ticket
+            - Method=POST
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        # Verificar estado de proceso Camunda (requiere JWT)
+        - id: camunda-process-status
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/camunda/process-status/**
             - Method=GET
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
@@ -392,6 +464,47 @@ spring:
           uri: http://localhost:8086
           predicates:
             - Path=/api/tickets/user/{usuarioId}
+            - Method=GET
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        # Reserva Routes
+        # Crear reserva (requiere JWT)
+        - id: reserva-create
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/reservas/crear
+            - Method=POST
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        # Confirmar reserva (requiere JWT)
+        - id: reserva-confirm
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/reservas/{id}/confirmar
+            - Method=PUT
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        # Liberar reserva (requiere JWT)
+        - id: reserva-release
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/reservas/{id}/liberar
+            - Method=PUT
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        # Obtener reservas activas por usuario (requiere JWT)
+        - id: reserva-list-by-user
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/reservas/usuario/{usuarioId}/activas
             - Method=GET
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}

@@ -51,11 +51,14 @@ public class AuthService {
             // PASO 2: Buscar información completa del usuario
             User user = userService.findByEmail(request.getEmail());
 
-            // PASO 3: Generar token JWT con userId en los claims
+            // PASO 3: Generar token JWT con userId y rol en los claims
             // Los claims son datos adicionales embebidos en el token
             UserDetails userDetails = userService.loadUserByUsername(user.getEmail());
             Map<String, Object> claims = new HashMap<>();
             claims.put("userId", user.getId()); // Claim personalizado para identificar usuario
+            claims.put("nombre", user.getNombre());
+            claims.put("apellido", user.getApellido());
+            claims.put("rol", user.getRol().name()); // Claim para autorización basada en roles
             String token = jwtService.generateToken(claims, userDetails);
 
             // PASO 4: Retornar token + datos del usuario

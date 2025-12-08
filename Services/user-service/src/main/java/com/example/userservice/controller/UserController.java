@@ -102,6 +102,16 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    @GetMapping("/email/{email}")
+    @Operation(
+            summary = "Obtener usuario por email",
+            description = "Obtener información de un usuario específico por su email"
+    )
+    public ResponseEntity<UserDto> getUserByEmail(@PathVariable String email) {
+        UserDto user = userService.getUserByEmail(email);
+        return ResponseEntity.ok(user);
+    }
+
     @PutMapping("/{id}")
     @Operation(
             summary = "Actualizar usuario",

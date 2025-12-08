@@ -63,12 +63,14 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
             // Los servicios internos recibirán estos headers y NO necesitan validar JWT
             String email = jwtService.extractEmail(token);
             String userId = jwtService.extractUserId(token);
+            String role = jwtService.extractRole(token);
 
             // PASO 4: Añadir headers enriquecidos para los servicios internos
             // Los servicios pueden confiar en estos headers porque Gateway ya validó el JWT
             ServerHttpRequest modifiedRequest = request.mutate()
                     .header("X-User-Email", email)
                     .header("X-User-ID", userId != null ? userId : "unknown")
+                    .header("X-User-Role", role)
                     .build();
 
             // PASO 5: Continuar con la petición enriquecida hacia el servicio destino

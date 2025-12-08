@@ -35,7 +35,7 @@ Write-Host ""
 Write-Host "[3/4] Ejecutando coleccion de Postman..." -ForegroundColor Yellow
 Write-Host ""
 
-newman run SOA-Ticketing.postman_collection.json --color on --delay-request 500
+newman run SOA-Ticketing.postman_collection.json --color on --delay-request 15000
 
 $exitCode = $LASTEXITCODE
 

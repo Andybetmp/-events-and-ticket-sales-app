@@ -33,7 +33,11 @@ public class PaymentController {
             "success", true,
             "service", "payment-service",
             "status", "UP",
-            "description", "Servicio de pagos simulado (montos > $1000 son rechazados)"
+            "description", "Servicio de pagos simulado",
+            "reglas", Map.of(
+                "rechazoPorMonto", "Montos > $1000 son rechazados",
+                "rechazoPorTarjeta", "Tarjetas terminadas en 0000 son rechazadas (para testing de compensación)"
+            )
         ));
     }
 }

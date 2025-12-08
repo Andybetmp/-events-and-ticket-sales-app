@@ -71,8 +71,8 @@ Write-Host "══════════════════════�
 
 Start-Sleep -Seconds 5
 
-# Verificar Jobs
-Write-Host "`nEstado de los Jobs:" -ForegroundColor Cyan
+# Verificar Servicios
+Write-Host "`nEstado de los Servicios:" -ForegroundColor Cyan
 Get-Job | Format-Table -Property Id, Name, State
 
 # Verificar puertos

@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -44,16 +45,44 @@ public class PaymentService {
     @Autowired
     private PaymentRepository paymentRepository;
 
+    @Transactional
     public PaymentResponse procesarPago(PaymentRequest request) {
+        // IDEMPOTENCY CHECK: If idempotencyKey exists, return cached result
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isEmpty()) {
+            var existingPayment = paymentRepository.findByIdempotencyKey(request.getIdempotencyKey());
+            if (existingPayment.isPresent()) {
+                Payment cached = existingPayment.get();
+                log.info("╔═══════════════════════════════════════════════════════════╗");
+                log.info("║     ♻️ DUPLICATE PAYMENT DETECTED - RETURNING CACHED     ║");
+                log.info("╠═══════════════════════════════════════════════════════════╣");
+                log.info("║ Idempotency Key: {}", String.format("%-37s", request.getIdempotencyKey()) + "║");
+                log.info("║ Cached Payment:  {}", String.format("%-37s", cached.getPaymentId()) + "║");
+                log.info("║ Status:          {}", String.format("%-37s", cached.getStatus()) + "║");
+                log.info("╚═══════════════════════════════════════════════════════════╝");
+                return new PaymentResponse(
+                    cached.getPaymentId(),
+                    cached.getStatus(),
+                    cached.getMonto(),
+                    cached.getFechaCreacion(),
+                    cached.getMensaje()
+                );
+            }
+        }
+        
         String paymentId = "PAY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         
         log.info("╔═══════════════════════════════════════════════════════════╗");
         log.info("║           💳 PROCESANDO PAGO - PAYMENT SERVICE           ║");
         log.info("╠═══════════════════════════════════════════════════════════╣");
         log.info("║ Payment ID:       {}", String.format("%-39s", paymentId) + "║");
+        log.info("║ Idempotency Key:  {}", String.format("%-39s", request.getIdempotencyKey() != null ? request.getIdempotencyKey() : "N/A") + "║");
         log.info("║ Monto:            ${}", String.format("%-38s", request.getMonto()) + "║");
         log.info("║ Tarjeta:          ****{}", String.format("%-35s", request.getCardNumber().substring(request.getCardNumber().length() - 4)) + "║");
         log.info("╠═══════════════════════════════════════════════════════════╣");
+        
+        // DEBUG: Mostrar número completo para verificar
+        log.info("DEBUG: Número de tarjeta completo: {}", request.getCardNumber());
+        log.info("DEBUG: ¿Termina en 0000? {}", request.getCardNumber().endsWith("0000"));
         
         // Validar monto (simulación de regla de negocio)
         if (request.getMonto() == null || request.getMonto() <= 0) {
@@ -63,6 +92,7 @@ public class PaymentService {
             // Guardar en BD
             Payment payment = new Payment(
                 paymentId,
+                request.getIdempotencyKey(),
                 request.getMonto(),
                 "REJECTED",
                 request.getCardNumber() != null ? request.getCardNumber().substring(request.getCardNumber().length() - 4) : null,
@@ -79,6 +109,31 @@ public class PaymentService {
             );
         }
         
+        // Simular tarjeta inválida: rechazar tarjetas que terminan en 0000 (para testing de compensación)
+        if (request.getCardNumber() != null && request.getCardNumber().endsWith("0000")) {
+            log.warn("║ RESULTADO:        ❌ RECHAZADO - Tarjeta bloqueada       ║");
+            log.info("╚═══════════════════════════════════════════════════════════╝");
+            
+            // Guardar en BD
+            Payment payment = new Payment(
+                paymentId,
+                request.getIdempotencyKey(),
+                request.getMonto(),
+                "REJECTED",
+                request.getCardNumber().substring(request.getCardNumber().length() - 4),
+                "Tarjeta bloqueada por el banco"
+            );
+            paymentRepository.save(payment);
+            
+            return new PaymentResponse(
+                paymentId,
+                "REJECTED",
+                request.getMonto(),
+                Instant.now(),
+                "Tarjeta bloqueada por el banco"
+            );
+        }
+        
         // Simular validación de fondos: montos > 1000 son rechazados
         if (request.getMonto() > LIMITE_MONTO) {
             log.warn("║ RESULTADO:        ❌ RECHAZADO - Fondos insuficientes    ║");
@@ -87,6 +142,7 @@ public class PaymentService {
             // Guardar en BD
             Payment payment = new Payment(
                 paymentId,
+                request.getIdempotencyKey(),
                 request.getMonto(),
                 "REJECTED",
                 request.getCardNumber().substring(request.getCardNumber().length() - 4),
@@ -110,6 +166,7 @@ public class PaymentService {
         // Guardar en BD
         Payment payment = new Payment(
             paymentId,
+            request.getIdempotencyKey(),
             request.getMonto(),
             "APPROVED",
             request.getCardNumber().substring(request.getCardNumber().length() - 4),

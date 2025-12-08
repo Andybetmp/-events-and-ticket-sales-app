@@ -25,6 +25,9 @@ public class UpdateUserRequest {
     @Schema(description = "Número de teléfono", example = "987654321")
     private String telefono;
 
+    @Schema(description = "Contraseña actual (requerida para cambiar contraseña)", example = "Password123")
+    private String contrasenaActual;
+
     @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
     @Schema(description = "Nueva contraseña (opcional)", example = "NuevaPassword123")
     private String contrasena;

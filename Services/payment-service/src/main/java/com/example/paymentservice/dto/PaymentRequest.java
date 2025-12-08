@@ -1,6 +1,7 @@
 package com.example.paymentservice.dto;
 
 public class PaymentRequest {
+    private String idempotencyKey; // NEW: UUID to prevent duplicate payments
     private Double monto;
     private String cardNumber;
     private String cvv;
@@ -10,12 +11,21 @@ public class PaymentRequest {
     public PaymentRequest() {
     }
 
-    public PaymentRequest(Double monto, String cardNumber, String cvv, String expiryDate, String cardHolder) {
+    public PaymentRequest(String idempotencyKey, Double monto, String cardNumber, String cvv, String expiryDate, String cardHolder) {
+        this.idempotencyKey = idempotencyKey;
         this.monto = monto;
         this.cardNumber = cardNumber;
         this.cvv = cvv;
         this.expiryDate = expiryDate;
         this.cardHolder = cardHolder;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
     }
 
     public Double getMonto() {

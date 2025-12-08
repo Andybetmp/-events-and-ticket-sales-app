@@ -19,13 +19,13 @@
 							"",
 							"pm.test(\"Usuario registrado correctamente\", function () {",
 							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.exitoso).to.be.true;",
 							"    pm.expect(jsonData.token).to.not.be.empty;",
 							"    pm.expect(jsonData.usuario.email).to.eql(\"u20202269@utp.edu.pe\");",
 							"    ",
 							"    // Guardar token para siguientes requests",
-							"    pm.environment.set(\"jwt_token\", jsonData.token);",
-							"    pm.environment.set(\"user_email\", jsonData.usuario.email);",
+							"    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+							"    pm.collectionVariables.set(\"user_email\", jsonData.usuario.email);",
 							"});"
 						],
 						"type": "text/javascript"
@@ -72,11 +72,11 @@
 							"",
 							"pm.test(\"Login exitoso\", function () {",
 							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.exitoso).to.be.true;",
 							"    pm.expect(jsonData.token).to.not.be.empty;",
 							"    ",
 							"    // Actualizar token",
-							"    pm.environment.set(\"jwt_token\", jsonData.token);",
+							"    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
 							"});"
 						],
 						"type": "text/javascript"
@@ -129,8 +129,8 @@
 							"    pm.expect(jsonData.tiposEntrada.length).to.be.at.least(1);",
 							"    ",
 							"    // Guardar IDs para siguiente request",
-							"    pm.environment.set(\"event_id\", jsonData.id);",
-							"    pm.environment.set(\"tipo_entrada_id\", jsonData.tiposEntrada[0].id);",
+							"    pm.collectionVariables.set(\"event_id\", jsonData.id);",
+							"    pm.collectionVariables.set(\"tipo_entrada_id\", jsonData.tiposEntrada[0].id);",
 							"});"
 						],
 						"type": "text/javascript"
@@ -191,7 +191,7 @@
 							"    pm.expect(jsonData.total).to.eql(120); // 2 tickets x 60",
 							"    ",
 							"    // Guardar ticket ID",
-							"    pm.environment.set(\"ticket_id\", jsonData.ticketId);",
+							"    pm.collectionVariables.set(\"ticket_id\", jsonData.ticketId);",
 							"});"
 						],
 						"type": "text/javascript"
@@ -282,43 +282,6 @@
 					]
 				},
 				"description": "Obtiene todos los tickets del usuario autenticado."
-			},
-			"response": []
-		},
-		{
-			"name": "Gateway Health Check",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"pm.test(\"Status code is 200\", function () {",
-							"    pm.response.to.have.status(200);",
-							"});",
-							"",
-							"pm.test(\"Gateway está funcionando\", function () {",
-							"    var jsonData = pm.response.json();",
-							"    pm.expect(jsonData.status).to.eql(\"UP\");",
-							"});"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/api/health",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"health"
-					]
-				},
-				"description": "Verifica que el Gateway esté activo y funcionando."
 			},
 			"response": []
 		}

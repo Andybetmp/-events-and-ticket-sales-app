@@ -5,8 +5,10 @@ import com.example.ticketservice.dto.PurchaseTicketRequest;
 import com.example.ticketservice.orchestrator.EventCreationOrchestrator;
 import com.example.ticketservice.orchestrator.TicketPurchaseOrchestrator;
 import com.example.ticketservice.orchestrator.UserRegistrationOrchestrator;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orchestration")
+@Validated
 public class OrchestrationController {
 
     @Autowired
@@ -29,7 +32,7 @@ public class OrchestrationController {
     private TicketServiceClient ticketClient;
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody Map<String, Object> userData) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody Map<String, Object> userData) {
         try {
             Map<String, Object> response = userRegistrationOrchestrator.orchestrateRegistration(userData);
             return ResponseEntity.ok(response);
@@ -41,7 +44,7 @@ public class OrchestrationController {
     @PostMapping("/create-event")
     public ResponseEntity<?> createEvent(
             @RequestHeader(value = "X-User-Email", required = false) String userEmail,
-            @RequestBody Map<String, Object> eventData) {
+            @Valid @RequestBody Map<String, Object> eventData) {
         
         if (userEmail == null || userEmail.isEmpty()) {
             return ResponseEntity.badRequest().body("Header X-User-Email es requerido");
@@ -59,7 +62,7 @@ public class OrchestrationController {
     public ResponseEntity<?> purchaseTicket(
             @RequestHeader(value = "X-User-ID", required = false) Long userId,
             @RequestHeader(value = "X-User-Email", required = false) String userEmail,
-            @RequestBody PurchaseTicketRequest request) {
+            @Valid @RequestBody PurchaseTicketRequest request) {
         
         if (userId == null) {
             return ResponseEntity.badRequest().body("Header X-User-ID es requerido");

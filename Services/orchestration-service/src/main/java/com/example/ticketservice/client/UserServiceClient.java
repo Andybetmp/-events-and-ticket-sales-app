@@ -23,4 +23,11 @@ public class UserServiceClient {
         ResponseEntity<Map> response = restTemplate.postForEntity(url, userData, Map.class);
         return response.getBody();
     }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getUserByEmail(String email) {
+        String url = serviceUrls.getUserService().getUrl() + "/api/users/email/" + email;
+        ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+        return response.getBody();
+    }
 }

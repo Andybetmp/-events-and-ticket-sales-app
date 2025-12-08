@@ -34,6 +34,12 @@ public class JwtService {
         return userId != null ? userId.toString() : null;
     }
 
+    public String extractRole(String token) {
+        Claims claims = extractAllClaims(token);
+        Object role = claims.get("rol");
+        return role != null ? role.toString() : "USUARIO";
+    }
+
     public Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())

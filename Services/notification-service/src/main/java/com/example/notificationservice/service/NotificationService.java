@@ -31,10 +31,6 @@ import java.util.UUID;
  * - Graceful degradation: Si falla SMTP, cae a logs (no rompe el flujo)
  * - Notification ID único para tracking
  * 
- * CONFIGURACIÓN GMAIL:
- * Ver application.properties:
- * - spring.mail.username
- * - spring.mail.password (contraseña de aplicación)
  */
 @Service
 public class NotificationService {
@@ -106,10 +102,10 @@ public class NotificationService {
             );
             
             mailSender.send(message);
-            log.info("✅ Email BIENVENIDA enviado a: {} [{}]", request.getDestinatario(), notificationId);
+            log.info("Email BIENVENIDA enviado a: {} [{}]", request.getDestinatario(), notificationId);
             
         } catch (Exception e) {
-            log.error("❌ Error enviando email BIENVENIDA a {}: {}", request.getDestinatario(), e.getMessage());
+            log.error("Error enviando email BIENVENIDA a {}: {}", request.getDestinatario(), e.getMessage());
             throw new RuntimeException("Error enviando email", e);
         }
     }
@@ -150,10 +146,10 @@ public class NotificationService {
             );
             
             mailSender.send(message);
-            log.info("✅ Email EVENTO_CREADO enviado a: {} [{}]", request.getDestinatario(), notificationId);
+            log.info("Email EVENTO_CREADO enviado a: {} [{}]", request.getDestinatario(), notificationId);
             
         } catch (Exception e) {
-            log.error("❌ Error enviando email EVENTO_CREADO a {}: {}", request.getDestinatario(), e.getMessage());
+            log.error("Error enviando email EVENTO_CREADO a {}: {}", request.getDestinatario(), e.getMessage());
             throw new RuntimeException("Error enviando email", e);
         }
     }
@@ -205,10 +201,10 @@ public class NotificationService {
             );
             
             mailSender.send(message);
-            log.info("✅ Email TICKET_COMPRADO enviado a: {} [{}]", request.getDestinatario(), notificationId);
+            log.info("Email TICKET_COMPRADO enviado a: {} [{}]", request.getDestinatario(), notificationId);
             
         } catch (Exception e) {
-            log.error("❌ Error enviando email TICKET_COMPRADO a {}: {}", request.getDestinatario(), e.getMessage());
+            log.error("Error enviando email TICKET_COMPRADO a {}: {}", request.getDestinatario(), e.getMessage());
             throw new RuntimeException("Error enviando email", e);
         }
     }
@@ -252,10 +248,10 @@ public class NotificationService {
             );
             
             mailSender.send(message);
-            log.info("✅ Email PAGO_RECHAZADO enviado a: {} [{}]", request.getDestinatario(), notificationId);
+            log.info("Email PAGO_RECHAZADO enviado a: {} [{}]", request.getDestinatario(), notificationId);
             
         } catch (Exception e) {
-            log.error("❌ Error enviando email PAGO_RECHAZADO a {}: {}", request.getDestinatario(), e.getMessage());
+            log.error("Error enviando email PAGO_RECHAZADO a {}: {}", request.getDestinatario(), e.getMessage());
             throw new RuntimeException("Error enviando email", e);
         }
     }

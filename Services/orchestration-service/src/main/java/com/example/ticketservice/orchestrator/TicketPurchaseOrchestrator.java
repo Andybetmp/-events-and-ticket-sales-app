@@ -14,27 +14,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Orquestador de Compra de Tickets - Implementa el Patrón SAGA con compensación.
+ * Orquestador de Compra de Tickets - Implementa el Patrón SAGA con RESERVAS TEMPORALES.
  * 
- * PATRÓN SAGA:
+ * PATRÓN SAGA CON RESERVAS:
  * En microservicios, NO podemos usar transacciones ACID tradicionales porque cada servicio
  * tiene su propia base de datos. El patrón Saga divide una transacción distribuida en
  * pasos secuenciales, y si algún paso falla, ejecuta "compensaciones" para deshacer 
  * los pasos previos exitosos.
  * 
- * FLUJO DE COMPRA (7 PASOS):
+ * FLUJO DE COMPRA CON RESERVAS (6 PASOS):
  * 1. Obtener información del tipo de entrada
- * 2. Validar stock disponible
- * 3. Obtener información del evento
- * 4. RESERVAR entradas (decrementar stock) ← COMPENSABLE
- * 5. Procesar pago ← PUNTO CRÍTICO (puede fallar)
- * 6. Crear ticket (confirmar reserva)
- * 7. Enviar notificación de confirmación
+ * 2. Obtener información del evento
+ * 3. CREAR RESERVA temporal (decrementa stock por 10 minutos) ← PUNTO DE BLOQUEO
+ * 4. Procesar pago ← PUNTO CRÍTICO (puede fallar)
+ * 5. CONFIRMAR RESERVA y crear ticket (pago exitoso)
+ * 6. Enviar notificación de confirmación
  * 
  * COMPENSACIÓN:
- * Si el pago falla después de decrementar stock, ejecutamos compensación:
- * - incrementarCantidad() para restaurar el stock
+ * Si el pago falla después de crear la reserva:
+ * - liberarReserva() para restaurar el stock
  * - Notificar al usuario del rechazo
+ * 
+ * Si el timer de 10 minutos expira, un @Scheduled job libera automáticamente la reserva.
  * 
  * IMPORTANTE:
  * Este servicio NO tiene lógica de negocio, solo COORDINA llamadas a otros servicios
@@ -59,12 +60,12 @@ public class TicketPurchaseOrchestrator {
 
     public Map<String, Object> orchestratePurchase(Long userId, String userEmail, PurchaseTicketRequest request) {
         log.info("═══════════════════════════════════════════════════════════");
-        log.info("INICIANDO ORQUESTACIÓN DE COMPRA DE TICKET (CON SAGA)");
+        log.info("INICIANDO ORQUESTACIÓN DE COMPRA CON RESERVA TEMPORAL");
         log.info("Usuario ID: {}, Email: {}", userId, userEmail);
         log.info("═══════════════════════════════════════════════════════════");
 
         // Variables para compensación
-        boolean stockReservado = false;
+        Long reservaId = null;
         Long tipoEntradaId = request.getTipoEntradaId();
         Integer cantidad = request.getCantidad();
 
@@ -80,36 +81,32 @@ public class TicketPurchaseOrchestrator {
             
             log.info("  ✓ Tipo: {}, Precio: ${}, Disponibles: {}", tipoNombre, precio, cantidadDisponible);
 
-            // PASO 2: Validar stock disponible
-            log.info("PASO 2: Validando stock (solicitado: {}, disponible: {})", request.getCantidad(), cantidadDisponible);
-            if (cantidadDisponible < request.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente. Disponibles: " + cantidadDisponible);
-            }
-            log.info("  ✓ Stock suficiente");
-
-            // PASO 3: Obtener información del evento
-            log.info("PASO 3: Obteniendo información del evento ID={}", eventoId);
+            // PASO 2: Obtener información del evento
+            log.info("PASO 2: Obteniendo información del evento ID={}", eventoId);
             Map<String, Object> evento = eventClient.getEvento(eventoId);
             String eventoNombre = (String) evento.get("nombre");
             String fechaEvento = (String) evento.get("fechaEvento");
             log.info("  ✓ Evento: {}, Fecha: {}", eventoNombre, fechaEvento);
 
-            // PASO 4: RESERVAR entradas (decrementar stock temporalmente)
-            log.info("PASO 4: RESERVANDO {} entradas (decrementando stock temporalmente)", request.getCantidad());
+            // PASO 3: CREAR RESERVA TEMPORAL (decrementa stock por 10 minutos)
+            log.info("PASO 3: CREANDO RESERVA TEMPORAL de {} entradas (expira en 10 min)", request.getCantidad());
             try {
-                eventClient.decreaseCantidad(request.getTipoEntradaId(), request.getCantidad());
-                stockReservado = true;
-                log.info("  ✓ Entradas RESERVADAS - Stock decrementado temporalmente");
+                Map<String, Object> reserva = ticketClient.crearReserva(tipoEntradaId, userId, cantidad);
+                reservaId = ((Number) reserva.get("id")).longValue();
+                Long segundosRestantes = ((Number) reserva.get("segundosRestantes")).longValue();
+                log.info("  ✓ Reserva ID={} creada exitosamente (expira en {} segundos)", reservaId, segundosRestantes);
+                log.info("  ✓ Stock DECREMENTADO temporalmente - Usuario tiene tiempo limitado para pagar");
             } catch (Exception e) {
-                log.error("  ✗ Error al reservar entradas: {}", e.getMessage());
-                throw new RuntimeException("No se pudo reservar las entradas: " + e.getMessage());
+                log.error("  ✗ Error al crear reserva: {}", e.getMessage());
+                throw new RuntimeException("No se pudo crear la reserva: " + e.getMessage());
             }
 
-            // PASO 5: Procesar pago (operación crítica)
+            // PASO 4: Procesar pago (operación crítica)
             Double montoTotal = precio * request.getCantidad();
-            log.info("PASO 5: Procesando pago por ${} (CRÍTICO - puede fallar)", montoTotal);
+            log.info("PASO 4: Procesando pago por ${} (CRÍTICO - puede fallar)", montoTotal);
             
             Map<String, Object> paymentRequest = new HashMap<>();
+            paymentRequest.put("idempotencyKey", request.getIdempotencyKey()); // NEW: For idempotency
             paymentRequest.put("monto", montoTotal);
             paymentRequest.put("cardNumber", request.getPaymentMethod().getCardNumber());
             paymentRequest.put("cvv", request.getPaymentMethod().getCvv());
@@ -130,10 +127,9 @@ public class TicketPurchaseOrchestrator {
                     log.error("  ✗ Pago rechazado: {}", mensaje);
                     
                     // COMPENSACIÓN: Liberar reserva
-                    log.warn("⚠️ Iniciando COMPENSACIÓN - Liberando reserva de {} entradas", cantidad);
-                    eventClient.increaseCantidad(tipoEntradaId, cantidad);
-                    stockReservado = false;
-                    log.info("  ✓ Reserva liberada - Stock restaurado");
+                    log.warn("⚠️ Iniciando COMPENSACIÓN - Liberando reserva ID={}", reservaId);
+                    ticketClient.liberarReserva(reservaId);
+                    log.info("  ✓ Reserva liberada - Stock restaurado automáticamente");
                     
                     // Notificar pago rechazado
                     sendPaymentRejectedNotification(userEmail, eventoNombre, montoTotal, mensaje);
@@ -149,10 +145,10 @@ public class TicketPurchaseOrchestrator {
                 log.error("  ✗ Error crítico procesando pago: {}", e.getMessage());
                 
                 // COMPENSACIÓN: Liberar reserva
-                if (stockReservado) {
-                    log.warn("⚠️ Iniciando COMPENSACIÓN - Liberando reserva de {} entradas", cantidad);
+                if (reservaId != null) {
+                    log.warn("⚠️ Iniciando COMPENSACIÓN - Liberando reserva ID={}", reservaId);
                     try {
-                        eventClient.increaseCantidad(tipoEntradaId, cantidad);
+                        ticketClient.liberarReserva(reservaId);
                         log.info("  ✓ Reserva liberada - Stock restaurado");
                     } catch (Exception compensationError) {
                         log.error("  ✗✗ ERROR EN COMPENSACIÓN: {}", compensationError.getMessage());
@@ -162,10 +158,15 @@ public class TicketPurchaseOrchestrator {
                 throw new RuntimeException("Error procesando pago: " + e.getMessage());
             }
 
-            // PASO 6: Crear registro de ticket (confirmar reserva)
-            log.info("PASO 6: Creando registro de ticket - CONFIRMANDO RESERVA");
+            // PASO 5: CONFIRMAR RESERVA y crear ticket
+            log.info("PASO 5: CONFIRMANDO RESERVA ID={} y creando ticket", reservaId);
             Map<String, Object> ticket;
             try {
+                // Confirmar reserva (cambia estado a CONFIRMADA)
+                ticketClient.confirmarReserva(reservaId);
+                log.info("  ✓ Reserva confirmada - Stock definitivamente vendido");
+                
+                // Crear ticket
                 ticket = ticketClient.crearTicket(
                     userId,
                     request.getTipoEntradaId(),
@@ -175,24 +176,27 @@ public class TicketPurchaseOrchestrator {
                     precio,
                     paymentId
                 );
-                log.info("  ✓ Ticket creado: {} - Reserva CONFIRMADA", ticket.get("ticketId"));
+                log.info("  ✓ Ticket creado: {}", ticket.get("ticketId"));
             } catch (Exception e) {
-                log.error("  ✗ Error crítico creando ticket: {}", e.getMessage());
+                log.error("  ✗ Error crítico confirmando reserva/creando ticket: {}", e.getMessage());
                 
-                // COMPENSACIÓN COMPLEJA: Reversar pago Y liberar stock
+                // COMPENSACIÓN COMPLEJA: Reversar pago Y liberar reserva
                 log.error("⚠️⚠️ COMPENSACIÓN CRÍTICA REQUERIDA");
                 log.error("  1. Payment ID {} aprobado pero ticket no creado", paymentId);
-                log.error("  2. Se requiere reversar pago O mantener registro para auditoría");
+                log.error("  2. Intentando liberar reserva ID={}", reservaId);
                 
-                // En un sistema real: intentar reversar el pago o registrar en tabla de compensación
-                // Por ahora: NO liberamos stock porque el pago fue exitoso
-                // Esto requiere intervención manual o proceso batch de reconciliación
+                try {
+                    ticketClient.liberarReserva(reservaId);
+                    log.info("  ✓ Reserva liberada - Stock restaurado");
+                } catch (Exception compError) {
+                    log.error("  ✗✗ ERROR liberando reserva: {}", compError.getMessage());
+                }
                 
                 throw new RuntimeException("Error crítico: pago procesado pero ticket no creado. Payment ID: " + paymentId);
             }
 
-            // PASO 7: Enviar notificación de confirmación (no crítico)
-            log.info("PASO 7: Enviando notificación de confirmación");
+            // PASO 6: Enviar notificación de confirmación (no crítico)
+            log.info("PASO 6: Enviando notificación de confirmación");
             try {
                 sendTicketPurchasedNotification(userEmail, ticket, eventoNombre, tipoNombre, fechaEvento);
                 log.info("  ✓ Notificación enviada");
@@ -203,9 +207,10 @@ public class TicketPurchaseOrchestrator {
 
             log.info("═══════════════════════════════════════════════════════════");
             log.info("✓ ORQUESTACIÓN COMPLETADA EXITOSAMENTE");
+            log.info("  Reserva ID: {} (CONFIRMADA)", reservaId);
             log.info("  Ticket ID: {}", ticket.get("ticketId"));
             log.info("  Total pagado: ${}", ticket.get("total"));
-            log.info("  Estado: CONFIRMADO (reserva convertida en venta)");
+            log.info("  Estado: VENTA CONFIRMADA");
             log.info("═══════════════════════════════════════════════════════════");
 
             return ticket;
@@ -214,6 +219,9 @@ public class TicketPurchaseOrchestrator {
             // Error ya manejado con compensación
             log.error("═══════════════════════════════════════════════════════════");
             log.error("✗ ORQUESTACIÓN FALLIDA: {}", e.getMessage());
+            if (reservaId != null) {
+                log.error("  Reserva ID={} fue liberada (stock restaurado)", reservaId);
+            }
             log.error("═══════════════════════════════════════════════════════════");
             throw e;
         } catch (Exception e) {
@@ -221,11 +229,11 @@ public class TicketPurchaseOrchestrator {
             log.error("✗ ERROR INESPERADO EN ORQUESTACIÓN: {}", e.getMessage());
             
             // Compensación de último recurso
-            if (stockReservado) {
-                log.warn("⚠️ Compensación de emergencia - Liberando {} entradas", cantidad);
+            if (reservaId != null) {
+                log.warn("⚠️ Compensación de emergencia - Liberando reserva ID={}", reservaId);
                 try {
-                    eventClient.increaseCantidad(tipoEntradaId, cantidad);
-                    log.info("  ✓ Stock restaurado");
+                    ticketClient.liberarReserva(reservaId);
+                    log.info("  ✓ Reserva liberada - Stock restaurado");
                 } catch (Exception compensationError) {
                     log.error("  ✗✗ ERROR EN COMPENSACIÓN DE EMERGENCIA: {}", compensationError.getMessage());
                 }

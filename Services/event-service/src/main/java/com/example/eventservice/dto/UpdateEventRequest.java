@@ -36,6 +36,13 @@ public class UpdateEventRequest {
     @Schema(description = "Categoría del evento", example = "Música")
     private String categoria;
 
+    @Size(max = 500, message = "La URL de la imagen no puede exceder 500 caracteres")
+    @Schema(description = "URL de la imagen del evento")
+    private String imagenUrl;
+
     @Schema(description = "Estado del evento", example = "true")
     private Boolean activo;
+
+    @Schema(description = "Estado del evento", example = "ACTIVO", allowableValues = {"ACTIVO", "CANCELADO", "FINALIZADO"})
+    private String estado;
 }

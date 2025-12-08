@@ -41,6 +41,10 @@ public class EventService {
                 .fechaEvento(request.getFechaEvento())
                 .capacidadTotal(capacidadCalculada)
                 .categoria(request.getCategoria())
+                .organizadorId(request.getOrganizadorId())
+                .organizador(request.getOrganizador())
+                .imagenUrl(request.getImagenUrl())
+                .estado(Event.EstadoEvento.ACTIVO)
                 .activo(true)
                 .build();
 
@@ -77,8 +81,9 @@ public class EventService {
     @Transactional(readOnly = true)
     public List<EventDto> getActiveEvents() {
         log.info("Obteniendo eventos activos");
-        return eventRepository.findByActivoTrue()
+        return eventRepository.findAll()
                 .stream()
+                .filter(e -> e.getEstado() == Event.EstadoEvento.ACTIVO)
                 .map(EventDto::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -110,11 +115,16 @@ public class EventService {
     }
 
     @Transactional
-    public EventDto updateEvent(Long id, UpdateEventRequest request) {
-        log.info("Actualizando evento con ID: {}", id);
+    public EventDto updateEvent(Long id, UpdateEventRequest request, Long userId, String userRole) {
+        log.info("Actualizando evento con ID: {} por usuario: {}", id, userId);
 
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado con ID: " + id));
+
+        // Validar que el usuario sea el organizador o sea ADMIN
+        if (!"ADMIN".equals(userRole) && !event.getOrganizadorId().equals(userId)) {
+            throw new BadRequestException("No tienes permisos para actualizar este evento");
+        }
 
         if (request.getNombre() != null) {
             event.setNombre(request.getNombre());
@@ -131,8 +141,22 @@ public class EventService {
         if (request.getCategoria() != null) {
             event.setCategoria(request.getCategoria());
         }
+        if (request.getImagenUrl() != null) {
+            event.setImagenUrl(request.getImagenUrl());
+        }
         if (request.getActivo() != null) {
             event.setActivo(request.getActivo());
+        }
+        if (request.getEstado() != null) {
+            try {
+                Event.EstadoEvento nuevoEstado = Event.EstadoEvento.valueOf(request.getEstado());
+                event.setEstado(nuevoEstado);
+                // Sincronizar activo con estado
+                event.setActivo(nuevoEstado == Event.EstadoEvento.ACTIVO);
+            } catch (IllegalArgumentException e) {
+                log.warn("Estado inválido recibido: {}", request.getEstado());
+                // Ignorar estado inválido
+            }
         }
 
         event.setFechaActualizacion(LocalDateTime.now());
@@ -144,17 +168,44 @@ public class EventService {
     }
 
     @Transactional
-    public void deleteEvent(Long id) {
-        log.info("Eliminando evento con ID: {}", id);
+    public void deleteEvent(Long id, Long userId, String userRole) {
+        log.info("Cancelando evento con ID: {} por usuario: {}", id, userId);
 
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado con ID: " + id));
 
-        // Soft delete
+        // Solo ADMIN puede cambiar el estado de cualquier evento
+        if ("ADMIN".equals(userRole)) {
+            // Admin puede cancelar cualquier evento
+            event.setEstado(Event.EstadoEvento.CANCELADO);
+            event.setActivo(false);
+            event.setFechaActualizacion(LocalDateTime.now());
+            eventRepository.save(event);
+            log.info("Evento cancelado por ADMIN: {}", id);
+        } else {
+            // Usuarios normales solo pueden cancelar sus propios eventos
+            if (!event.getOrganizadorId().equals(userId)) {
+                throw new BadRequestException("No tienes permisos para cancelar este evento");
+            }
+            // Marcar como CANCELADO
+            event.setEstado(Event.EstadoEvento.CANCELADO);
+            event.setActivo(false);
+            event.setFechaActualizacion(LocalDateTime.now());
+            eventRepository.save(event);
+            log.info("Evento cancelado por organizador: {}", id);
+        }
+    }
+
+    @Transactional
+    public void finalizarEvento(Long id) {
+        log.info("Finalizando evento con ID: {}", id);
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado con ID: " + id));
+        
+        event.setEstado(Event.EstadoEvento.FINALIZADO);
         event.setActivo(false);
         event.setFechaActualizacion(LocalDateTime.now());
         eventRepository.save(event);
-
-        log.info("Evento eliminado (soft delete): {}", id);
+        log.info("Evento finalizado: {}", id);
     }
 }

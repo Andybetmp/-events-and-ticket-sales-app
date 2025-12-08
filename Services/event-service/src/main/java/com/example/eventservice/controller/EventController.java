@@ -43,8 +43,8 @@ public class EventController {
             @ApiResponse(responseCode = "200", description = "Eventos obtenidos exitosamente")
     })
     public ResponseEntity<List<EventDto>> getAllEvents(
-            @Parameter(description = "Filtrar solo eventos activos")
-            @RequestParam(required = false, defaultValue = "false") boolean onlyActive,
+            @Parameter(description = "Filtrar solo eventos activos (por defecto true)")
+            @RequestParam(required = false, defaultValue = "true") boolean onlyActive,
             @Parameter(description = "Filtrar solo eventos próximos")
             @RequestParam(required = false, defaultValue = "false") boolean upcoming,
             @Parameter(description = "Filtrar solo eventos con disponibilidad")
@@ -83,26 +83,34 @@ public class EventController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Evento actualizado exitosamente"),
             @ApiResponse(responseCode = "404", description = "Evento no encontrado"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos")
+            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+            @ApiResponse(responseCode = "403", description = "No tienes permisos para actualizar este evento")
     })
     public ResponseEntity<EventDto> updateEvent(
             @Parameter(description = "ID del evento")
             @PathVariable Long id,
-            @Valid @RequestBody UpdateEventRequest request) {
-        EventDto event = eventService.updateEvent(id, request);
+            @Valid @RequestBody UpdateEventRequest request,
+            @RequestHeader(value = "X-User-ID", required = false) String userIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "USUARIO") String userRole) {
+        Long userId = userIdHeader != null ? Long.parseLong(userIdHeader) : null;
+        EventDto event = eventService.updateEvent(id, request, userId, userRole);
         return ResponseEntity.ok(event);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Eliminar evento", description = "Elimina (soft delete) un evento del sistema")
+    @Operation(summary = "Cancelar evento", description = "Cancela un evento (usuarios) o desactiva (admin)")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Evento eliminado exitosamente"),
-            @ApiResponse(responseCode = "404", description = "Evento no encontrado")
+            @ApiResponse(responseCode = "204", description = "Evento cancelado exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Evento no encontrado"),
+            @ApiResponse(responseCode = "403", description = "No tienes permisos para cancelar este evento")
     })
     public ResponseEntity<Void> deleteEvent(
             @Parameter(description = "ID del evento")
-            @PathVariable Long id) {
-        eventService.deleteEvent(id);
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-ID", required = false) String userIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "USUARIO") String userRole) {
+        Long userId = userIdHeader != null ? Long.parseLong(userIdHeader) : null;
+        eventService.deleteEvent(id, userId, userRole);
         return ResponseEntity.noContent().build();
     }
 

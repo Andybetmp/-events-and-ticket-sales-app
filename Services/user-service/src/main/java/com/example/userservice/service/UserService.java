@@ -70,10 +70,13 @@ public class UserService implements UserDetailsService {
 
             user = userRepository.save(user);
 
-            // Generar token con userId en los claims
+            // Generar token con userId y rol en los claims
             UserDetails userDetails = loadUserByUsername(user.getEmail());
             Map<String, Object> claims = new HashMap<>();
             claims.put("userId", user.getId());
+            claims.put("nombre", user.getNombre());
+            claims.put("apellido", user.getApellido());
+            claims.put("rol", user.getRol().name());
             String token = jwtService.generateToken(claims, userDetails);
 
             return AuthResponse.success(token, UserDto.fromEntity(user));
@@ -119,7 +122,20 @@ public class UserService implements UserDetailsService {
         if (request.getTelefono() != null && !request.getTelefono().isEmpty()) {
             user.setTelefono(request.getTelefono());
         }
+        
+        // Cambiar contraseña solo si se proporciona la nueva y la actual
         if (request.getContrasena() != null && !request.getContrasena().isEmpty()) {
+            // Validar que se proporcionó la contraseña actual
+            if (request.getContrasenaActual() == null || request.getContrasenaActual().isEmpty()) {
+                throw new RuntimeException("Debes proporcionar tu contraseña actual para cambiarla");
+            }
+            
+            // Verificar que la contraseña actual sea correcta
+            if (!passwordEncoder.matches(request.getContrasenaActual(), user.getContrasena())) {
+                throw new RuntimeException("La contraseña actual es incorrecta");
+            }
+            
+            // Actualizar la contraseña
             user.setContrasena(passwordEncoder.encode(request.getContrasena()));
         }
 

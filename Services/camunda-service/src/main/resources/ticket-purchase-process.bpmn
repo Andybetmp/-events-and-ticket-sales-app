@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ticket" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ticket-purchase-process" name="Ticket Purchase Process" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Inicio">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_GetTipoEntrada" name="Obtener Tipo Entrada" camunda:delegateExpression="${getTipoEntradaDelegate}">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_GetEvento" name="Obtener Evento" camunda:delegateExpression="${getEventoDelegate}">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_CreateReserva" name="Crear Reserva" camunda:delegateExpression="${createReservaDelegate}">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ProcessPayment" name="Procesar Pago" camunda:delegateExpression="${processPaymentDelegate}">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_1" name="¿Pago OK?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_OK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NO</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_LiberarReserva" name="Liberar Reserva" camunda:delegateExpression="${liberarReservaDelegate}">
+      <bpmn:incoming>Flow_NO</bpmn:incoming>
+      <bpmn:outgoing>Flow_End1</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Rejected" name="Rechazado">
+      <bpmn:incoming>Flow_End1</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_ConfirmarReserva" name="Confirmar Reserva" camunda:delegateExpression="${confirmarReservaDelegate}">
+      <bpmn:incoming>Flow_OK</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_CreateTicket" name="Crear Ticket" camunda:delegateExpression="${createTicketDelegate}">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_SendNotification" name="Notificar" camunda:delegateExpression="${sendNotificationDelegate}">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Success" name="Exitoso">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_GetTipoEntrada" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_GetTipoEntrada" targetRef="Task_GetEvento" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_GetEvento" targetRef="Task_CreateReserva" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_CreateReserva" targetRef="Task_ProcessPayment" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_ProcessPayment" targetRef="Gateway_1" />
+    <bpmn:sequenceFlow id="Flow_OK" name="SI" sourceRef="Gateway_1" targetRef="Task_ConfirmarReserva">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${paymentStatus == 'APPROVED'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NO" name="NO" sourceRef="Gateway_1" targetRef="Task_LiberarReserva">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${paymentStatus == 'REJECTED'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_End1" sourceRef="Task_LiberarReserva" targetRef="End_Rejected" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_ConfirmarReserva" targetRef="Task_CreateTicket" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_CreateTicket" targetRef="Task_SendNotification" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_SendNotification" targetRef="End_Success" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="ticket-purchase-process">
+      <bpmndi:BPMNShape id="Shape_Start" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_1" bpmnElement="Task_GetTipoEntrada">
+        <dc:Bounds x="240" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_2" bpmnElement="Task_GetEvento">
+        <dc:Bounds x="390" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_3" bpmnElement="Task_CreateReserva">
+        <dc:Bounds x="540" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_4" bpmnElement="Task_ProcessPayment">
+        <dc:Bounds x="690" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW" bpmnElement="Gateway_1" isMarkerVisible="true">
+        <dc:Bounds x="845" y="95" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_5" bpmnElement="Task_LiberarReserva">
+        <dc:Bounds x="820" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End1" bpmnElement="End_Rejected">
+        <dc:Bounds x="982" y="242" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_6" bpmnElement="Task_ConfirmarReserva">
+        <dc:Bounds x="960" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_7" bpmnElement="Task_CreateTicket">
+        <dc:Bounds x="1110" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_8" bpmnElement="Task_SendNotification">
+        <dc:Bounds x="1260" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End2" bpmnElement="End_Success">
+        <dc:Bounds x="1412" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_1" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_2" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="120" />
+        <di:waypoint x="390" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_3" bpmnElement="Flow_3">
+        <di:waypoint x="490" y="120" />
+        <di:waypoint x="540" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_4" bpmnElement="Flow_4">
+        <di:waypoint x="640" y="120" />
+        <di:waypoint x="690" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_5" bpmnElement="Flow_5">
+        <di:waypoint x="790" y="120" />
+        <di:waypoint x="845" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_OK" bpmnElement="Flow_OK">
+        <di:waypoint x="895" y="120" />
+        <di:waypoint x="960" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_NO" bpmnElement="Flow_NO">
+        <di:waypoint x="870" y="145" />
+        <di:waypoint x="870" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_End1" bpmnElement="Flow_End1">
+        <di:waypoint x="920" y="260" />
+        <di:waypoint x="982" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_6" bpmnElement="Flow_6">
+        <di:waypoint x="1060" y="120" />
+        <di:waypoint x="1110" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_7" bpmnElement="Flow_7">
+        <di:waypoint x="1210" y="120" />
+        <di:waypoint x="1260" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_8" bpmnElement="Flow_8">
+        <di:waypoint x="1360" y="120" />
+        <di:waypoint x="1412" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
