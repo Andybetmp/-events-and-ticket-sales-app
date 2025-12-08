@@ -43,4 +43,25 @@ public class TipoEntradaController {
         List<TipoEntradaDto> tiposEntrada = tipoEntradaService.getTiposEntradaByEvento(eventoId, soloActivos);
         return ResponseEntity.ok(tiposEntrada);
     }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Actualizar tipo de entrada", description = "Actualiza un tipo de entrada existente")
+    public ResponseEntity<TipoEntradaDto> updateTipoEntrada(
+            @PathVariable Long eventoId,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTipoEntradaRequest request) {
+        log.info("PUT /api/eventos/{}/tipos-entrada/{} - Actualizar tipo de entrada", eventoId, id);
+        TipoEntradaDto tipoEntrada = tipoEntradaService.updateTipoEntrada(id, request);
+        return ResponseEntity.ok(tipoEntrada);
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar tipo de entrada", description = "Elimina un tipo de entrada si no tiene ventas")
+    public ResponseEntity<Void> deleteTipoEntrada(
+            @PathVariable Long eventoId,
+            @PathVariable Long id) {
+        log.info("DELETE /api/eventos/{}/tipos-entrada/{} - Eliminar tipo de entrada", eventoId, id);
+        tipoEntradaService.deleteTipoEntrada(id);
+        return ResponseEntity.noContent().build();
+    }
 }

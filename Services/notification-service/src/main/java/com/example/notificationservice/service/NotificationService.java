@@ -25,6 +25,7 @@ import java.util.UUID;
  * - EVENTO_CREADO: Al publicar evento
  * - TICKET_COMPRADO: Al confirmar compra
  * - PAGO_RECHAZADO: Al fallar pago
+ * - PASSWORD_RESET: Al solicitar restablecimiento de contraseña
  * 
  * CARACTERÍSTICAS:
  * - @Async: Procesamiento asíncrono (no bloquea la operación principal)
@@ -56,6 +57,9 @@ public class NotificationService {
                 break;
             case "PAGO_RECHAZADO":
                 enviarPagoRechazado(request, notificationId);
+                break;
+            case "PASSWORD_RESET":
+                enviarPasswordReset(request, notificationId);
                 break;
             default:
                 log.warn("[{}] Tipo de notificación desconocido: {}", notificationId, request.getTipo());
@@ -252,6 +256,50 @@ public class NotificationService {
             
         } catch (Exception e) {
             log.error("Error enviando email PAGO_RECHAZADO a {}: {}", request.getDestinatario(), e.getMessage());
+            throw new RuntimeException("Error enviando email", e);
+        }
+    }
+
+    @Async
+    private void enviarPasswordReset(NotificationRequest request, String notificationId) {
+        String nombre = (String) request.getDatos().get("nombre");
+        String resetLink = (String) request.getDatos().get("resetLink");
+        
+        if (mailSender == null) {
+            // Modo simulación - solo logs
+            log.info("╔═══════════════════════════════════════════════════════════╗");
+            log.info("║      🔑 SIMULACIÓN EMAIL - RESTABLECER CONTRASEÑA        ║");
+            log.info("╠═══════════════════════════════════════════════════════════╣");
+            log.info("║ ID: {}", String.format("%-52s", notificationId) + "║");
+            log.info("║ Para: {}", String.format("%-50s", request.getDestinatario()) + "║");
+            log.info("║ Nombre: {}", String.format("%-48s", nombre) + "║");
+            log.info("║ Link: {}", String.format("%-49s", resetLink.length() > 49 ? resetLink.substring(0, 46) + "..." : resetLink) + "║");
+            log.info("╚═══════════════════════════════════════════════════════════╝");
+            return;
+        }
+        
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(request.getDestinatario());
+            message.setSubject("🔑 Restablecimiento de Contraseña - SOA Ticketing");
+            message.setText(
+                "Hola " + nombre + ",\n\n" +
+                "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.\n\n" +
+                "Haz clic en el siguiente enlace para crear una nueva contraseña:\n" +
+                resetLink + "\n\n" +
+                "Este enlace expirará en 1 hora por seguridad.\n\n" +
+                "Si no solicitaste restablecer tu contraseña, ignora este mensaje.\n" +
+                "Tu contraseña actual seguirá siendo válida.\n\n" +
+                "Saludos,\n" +
+                "Equipo SOA Ticketing\n\n" +
+                "Notification ID: " + notificationId
+            );
+            
+            mailSender.send(message);
+            log.info("Email PASSWORD_RESET enviado a: {} [{}]", request.getDestinatario(), notificationId);
+            
+        } catch (Exception e) {
+            log.error("Error enviando email PASSWORD_RESET a {}: {}", request.getDestinatario(), e.getMessage());
             throw new RuntimeException("Error enviando email", e);
         }
     }

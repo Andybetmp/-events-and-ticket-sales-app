@@ -132,13 +132,20 @@ export default function Login() {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              ¿No tienes una cuenta?{' '}
-              <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700 transition">
-                Regístrate aquí
+          <div className="mt-6 space-y-3">
+            <div className="text-center">
+              <Link to="/forgot-password" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition">
+                ¿Olvidaste tu contraseña?
               </Link>
-            </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                ¿No tienes una cuenta?{' '}
+                <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700 transition">
+                  Regístrate aquí
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
 

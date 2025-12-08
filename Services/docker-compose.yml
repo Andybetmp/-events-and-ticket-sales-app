@@ -1,7 +1,7 @@
 version: '3.8'
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Docker Compose - Sistema SOA Ticketing (7 Microservicios)
+# Docker Compose - Sistema SOA Ticketing (8 Microservicios)
 # ═══════════════════════════════════════════════════════════════════════════
 #
 # USO:
@@ -15,10 +15,11 @@ version: '3.8'
 #   - Gateway (8080): API Gateway + JWT
 #   - User Service (8081): Autenticación
 #   - Event Service (8082): Gestión de eventos
-#   - Orchestration Service (8083): Coordinador SAGA
+#   - Camunda Service (8083): Coordinador SAGA
 #   - Payment Service (8084): Procesamiento de pagos
 #   - Notification Service (8085): Envío de emails
 #   - Ticket Service (8086): Gestión de tickets
+#   - Image Service (8087): Gestión de imágenes
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
@@ -33,7 +34,7 @@ services:
       # Crear múltiples bases de datos al iniciar
       MYSQL_DATABASE: ticketing
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       # Script para crear las 3 bases de datos
@@ -92,13 +93,13 @@ services:
     restart: on-failure
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Orchestration Service - Coordinador SAGA (Puerto 8083)
+  # Camunda Service - Coordinador SAGA (Puerto 8083)
   # ─────────────────────────────────────────────────────────────────────────
-  orchestration-service:
+  camunda-service:
     build:
-      context: ./orchestration-service
+      context: ./camunda-service
       dockerfile: Dockerfile
-    container_name: soa-orchestration-service
+    container_name: soa-camunda-service
     ports:
       - "8083:8083"
     environment:
@@ -193,6 +194,24 @@ services:
     restart: on-failure
 
   # ─────────────────────────────────────────────────────────────────────────
+  # Image Service - Gestión de imágenes (Puerto 8087)
+  # ─────────────────────────────────────────────────────────────────────────
+  image-service:
+    build:
+      context: ./image-service
+      dockerfile: Dockerfile
+    container_name: soa-image-service
+    ports:
+      - "8087:8087"
+    environment:
+      GATEWAY_SECRET: soa-gateway-secret-key-2024
+    volumes:
+      - image_uploads:/app/uploads
+    networks:
+      - soa-network
+    restart: on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────
   # Gateway - API Gateway con validación JWT (Puerto 8080)
   # ─────────────────────────────────────────────────────────────────────────
   gateway:
@@ -208,10 +227,11 @@ services:
     depends_on:
       - user-service
       - event-service
-      - orchestration-service
+      - camunda-service
       - payment-service
       - notification-service
       - ticket-service
+      - image-service
     networks:
       - soa-network
     restart: on-failure
@@ -225,3 +245,4 @@ networks:
 
 volumes:
   mysql_data:
+  image_uploads:

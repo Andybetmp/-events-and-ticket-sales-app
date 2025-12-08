@@ -114,6 +114,19 @@ public class EventController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/finalizar")
+    @Operation(summary = "Finalizar evento", description = "Marca un evento como finalizado")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Evento finalizado exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Evento no encontrado")
+    })
+    public ResponseEntity<Void> finalizarEvento(
+            @Parameter(description = "ID del evento")
+            @PathVariable Long id) {
+        eventService.finalizarEvento(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/health")
     @Operation(summary = "Health check", description = "Verifica el estado del servicio")
     public ResponseEntity<Map<String, String>> health() {

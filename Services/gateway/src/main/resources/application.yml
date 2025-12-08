@@ -62,6 +62,30 @@ spring:
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
         
+        - id: user-forgot-password
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/forgot-password
+            - Method=POST
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+        
+        - id: user-reset-password
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/reset-password
+            - Method=POST
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+        
+        - id: user-validate-reset-token
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/validate-reset-token/{token}
+            - Method=GET
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+        
         - id: user-health
           uri: http://localhost:8081
           predicates:
@@ -224,6 +248,16 @@ spring:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
         
+        # Event - Finalizar evento
+        - id: event-finalize
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/eventos/{id}/finalizar
+            - Method=POST
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
         # Tipos de Entrada Routes
         # Crear tipo de entrada para un evento (requiere JWT)
         - id: tipo-entrada-create
@@ -243,6 +277,26 @@ spring:
             - Method=GET
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+        
+        # Actualizar tipo de entrada (requiere JWT)
+        - id: tipo-entrada-update
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/eventos/{eventoId}/tipos-entrada/{id}
+            - Method=PUT
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
+        
+        # Eliminar tipo de entrada (requiere JWT)
+        - id: tipo-entrada-delete
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/eventos/{eventoId}/tipos-entrada/{id}
+            - Method=DELETE
+          filters:
+            - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
+            - name: JwtAuthenticationFilter
         
         # Obtener tipo de entrada por ID
         - id: tipo-entrada-get-by-id

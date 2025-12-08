@@ -35,6 +35,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 new AntPathRequestMatcher("/api/users/register"),
                                 new AntPathRequestMatcher("/api/users/login"),
+                                new AntPathRequestMatcher("/api/users/forgot-password"),
+                                new AntPathRequestMatcher("/api/users/reset-password"),
+                                new AntPathRequestMatcher("/api/users/validate-reset-token/**"),
                                 new AntPathRequestMatcher("/api/users/health"),
                                 new AntPathRequestMatcher("/api/users/email/**"), // Para orchestrator
                                 new AntPathRequestMatcher("/api-docs/**"),

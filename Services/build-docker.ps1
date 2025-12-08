@@ -15,10 +15,11 @@ $services = @(
     "gateway",
     "user-service",
     "event-service",
-    "orchestration-service",
+    "camunda-service",
     "payment-service",
     "notification-service",
-    "ticket-service"
+    "ticket-service",
+    "image-service"
 )
 
 $total = $services.Count

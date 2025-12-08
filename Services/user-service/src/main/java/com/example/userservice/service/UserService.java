@@ -5,6 +5,9 @@ import com.example.userservice.dto.LoginRequest;
 import com.example.userservice.dto.RegisterRequest;
 import com.example.userservice.dto.UpdateUserRequest;
 import com.example.userservice.dto.UserDto;
+import com.example.userservice.exception.EmailAlreadyExistsException;
+import com.example.userservice.exception.InvalidCredentialsException;
+import com.example.userservice.exception.UserNotFoundException;
 import com.example.userservice.model.User;
 import com.example.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -51,11 +54,10 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        try {
-            // Validar que el email no exista
-            if (userRepository.existsByEmail(request.getEmail())) {
-                return AuthResponse.error("El email ya está registrado");
-            }
+        // Validar que el email no exista
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new EmailAlreadyExistsException(request.getEmail());
+        }
 
             // Crear usuario
             User user = User.builder()
@@ -80,14 +82,11 @@ public class UserService implements UserDetailsService {
             String token = jwtService.generateToken(claims, userDetails);
 
             return AuthResponse.success(token, UserDto.fromEntity(user));
-        } catch (Exception e) {
-            return AuthResponse.error("Registro fallido: " + e.getMessage());
-        }
     }
 
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new UserNotFoundException("email", email));
     }
 
     public UserDto getUserByEmail(String email) {
@@ -103,14 +102,14 @@ public class UserService implements UserDetailsService {
 
     public UserDto getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new UserNotFoundException(id));
         return UserDto.fromEntity(user);
     }
 
     @Transactional
     public UserDto updateUser(Long id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         // Actualizar solo los campos que no son nulos
         if (request.getNombre() != null && !request.getNombre().isEmpty()) {
@@ -127,12 +126,12 @@ public class UserService implements UserDetailsService {
         if (request.getContrasena() != null && !request.getContrasena().isEmpty()) {
             // Validar que se proporcionó la contraseña actual
             if (request.getContrasenaActual() == null || request.getContrasenaActual().isEmpty()) {
-                throw new RuntimeException("Debes proporcionar tu contraseña actual para cambiarla");
+                throw new InvalidCredentialsException("Debes proporcionar tu contraseña actual para cambiarla");
             }
             
             // Verificar que la contraseña actual sea correcta
             if (!passwordEncoder.matches(request.getContrasenaActual(), user.getContrasena())) {
-                throw new RuntimeException("La contraseña actual es incorrecta");
+                throw new InvalidCredentialsException("La contraseña actual es incorrecta");
             }
             
             // Actualizar la contraseña
@@ -146,7 +145,7 @@ public class UserService implements UserDetailsService {
     @Transactional
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new UserNotFoundException(id));
         
         //Desactivar el usuario
         user.setActivo(false);

@@ -28,6 +28,16 @@ public class EventService {
     public EventDto createEvent(CreateEventRequest request) {
         log.info("Creando evento: {}", request.getNombre());
 
+        // Validar que la fecha del evento sea futura
+        if (request.getFechaEvento().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("La fecha del evento debe ser futura");
+        }
+
+        // Validar que haya al menos un tipo de entrada
+        if (request.getTiposEntrada() == null || request.getTiposEntrada().isEmpty()) {
+            throw new BadRequestException("El evento debe tener al menos un tipo de entrada");
+        }
+
         // Calcular capacidad total basada en los tipos de entrada
         int capacidadCalculada = request.getTiposEntrada().stream()
                 .mapToInt(tipo -> tipo.getCantidad())
@@ -136,6 +146,10 @@ public class EventService {
             event.setUbicacion(request.getUbicacion());
         }
         if (request.getFechaEvento() != null) {
+            // Validar que la nueva fecha sea futura
+            if (request.getFechaEvento().isBefore(LocalDateTime.now())) {
+                throw new BadRequestException("La fecha del evento debe ser futura");
+            }
             event.setFechaEvento(request.getFechaEvento());
         }
         if (request.getCategoria() != null) {

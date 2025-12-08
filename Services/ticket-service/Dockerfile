@@ -8,7 +8,7 @@
 #
 # ═══════════════════════════════════════════════════════════════════════════
 
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 
 LABEL maintainer="SOA Ticketing Team"
 LABEL service="ticket-service"

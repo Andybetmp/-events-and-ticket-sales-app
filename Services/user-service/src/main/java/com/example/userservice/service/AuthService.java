@@ -3,6 +3,7 @@ package com.example.userservice.service;
 import com.example.userservice.dto.AuthResponse;
 import com.example.userservice.dto.LoginRequest;
 import com.example.userservice.dto.UserDto;
+import com.example.userservice.exception.InvalidCredentialsException;
 import com.example.userservice.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -64,8 +65,8 @@ public class AuthService {
             // PASO 4: Retornar token + datos del usuario
             return AuthResponse.success(token, UserDto.fromEntity(user));
         } catch (Exception e) {
-            // Cualquier error en autenticación retorna mensaje genérico por seguridad
-            return AuthResponse.error("Email o contraseña inválidos");
+            // Cualquier error en autenticación lanza excepción personalizada por seguridad
+            throw new InvalidCredentialsException();
         }
     }
 }
