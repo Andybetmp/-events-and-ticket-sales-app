@@ -159,18 +159,26 @@ Existen **2 formas** de ejecutar el sistema:
 
 ### Opción 1: Docker Compose (Recomendado) 🐳
 
-**Ventajas:** Setup automático, un solo comando, portátil.
+**Ventajas:** Setup automático, un solo comando, portátil, incluye frontend.
 
 ```bash
-# 1. Compilar todos los servicios
+# 1. Compilar todos los servicios (backend + frontend)
 .\build-docker.ps1
 
-# 2. Ver logs
+# 2. Acceder a la aplicación
+# Abrir navegador en: http://localhost
+
+# 3. Ver logs
 docker-compose logs -f
 
-# 3. Detener
+# 4. Detener
 docker-compose down
 ```
+
+**Servicios incluidos:**
+- ✅ 8 microservicios backend (puertos 8080-8087)
+- ✅ Frontend React (puerto 80)
+- ✅ MySQL (puerto 3306)
 
 **Ver documentación completa:** [DOCKER.md](DOCKER.md)
 
@@ -182,9 +190,10 @@ docker-compose down
 
 1. **Java 17** instalado - Verifica: `java -version`
 2. **Maven** instalado - Verifica: `mvn -version`
-3. **MySQL** corriendo en XAMPP (puerto 3306, usuario: `root`, password: `root`)
+3. **Node.js** instalado - Verifica: `node -version`
+4. **MySQL** corriendo en XAMPP (puerto 3306, usuario: `root`, password: `root`)
 
-#### Iniciar Todos los Servicios
+#### Iniciar Servicios Backend
 
 ```powershell
 cd 'd:\Tareas de programacion\SOA'
@@ -192,9 +201,21 @@ cd 'd:\Tareas de programacion\SOA'
 ```
 
 El script:
-- Inicia los 7 servicios como PowerShell background jobs
-- Orden: user → event → orchestration → payment → notification → ticket → gateway
-- Verifica que los 7 puertos estén escuchando (8080-8086)
+- Inicia los 8 servicios backend como PowerShell background jobs
+- Orden: user → event → camunda → payment → notification → ticket → image → gateway
+- Verifica que los 8 puertos estén escuchando (8080-8087)
+
+#### Iniciar Frontend
+
+En una terminal separada:
+
+```powershell
+cd Frontend
+npm install  # Solo la primera vez
+npm run dev
+```
+
+El frontend estará disponible en: http://localhost:5173
 
 ### Verificar que Todo Funciona
 
@@ -211,14 +232,22 @@ Esto ejecuta un flujo completo:
 
 ### Detener Todos los Servicios
 
+Backend:
 ```powershell
 .\stop-services.ps1
 ```
 
+Frontend:
+```powershell
+# Presionar Ctrl+C en la terminal donde corre npm run dev
+```
+
 ## 🌐 URLs de los Servicios
 
+### Con Docker Compose
 | Service | URL | Swagger UI |
 |----------|-----|---------|
+| **Frontend** | **http://localhost** | - |
 | Gateway | http://localhost:8080 | - |
 | User Service | http://localhost:8081 | http://localhost:8081/swagger-ui.html |
 | Event Service | http://localhost:8082 | http://localhost:8082/swagger-ui.html |
@@ -226,9 +255,25 @@ Esto ejecuta un flujo completo:
 | Payment | http://localhost:8084 | http://localhost:8084/swagger-ui.html |
 | Notification | http://localhost:8085 | http://localhost:8085/swagger-ui.html |
 | Ticket | http://localhost:8086 | http://localhost:8086/swagger-ui.html |
-| Frontend | http://localhost:5173 | - |
+| Image | http://localhost:8087 | http://localhost:8087/swagger-ui.html |
 
-**⚠️ Importante**: Siempre acceder a través del Gateway (puerto 8080), no directamente a los servicios.
+### Con Ejecución Local
+| Service | URL | Swagger UI |
+|----------|-----|---------|
+| **Frontend** | **http://localhost:5173** | - |
+| Gateway | http://localhost:8080 | - |
+| User Service | http://localhost:8081 | http://localhost:8081/swagger-ui.html |
+| Event Service | http://localhost:8082 | http://localhost:8082/swagger-ui.html |
+| Camunda | http://localhost:8083 | http://localhost:8083/swagger-ui.html |
+| Payment | http://localhost:8084 | http://localhost:8084/swagger-ui.html |
+| Notification | http://localhost:8085 | http://localhost:8085/swagger-ui.html |
+| Ticket | http://localhost:8086 | http://localhost:8086/swagger-ui.html |
+| Image | http://localhost:8087 | http://localhost:8087/swagger-ui.html |
+
+**⚠️ Importante**: 
+- En **Docker**: Acceder al frontend en `http://localhost` (puerto 80)
+- En **Local**: Acceder al frontend en `http://localhost:5173`
+- El frontend se comunica automáticamente con el Gateway
 
 ## 📝 Funcionalidades Principales
 
@@ -454,21 +499,7 @@ Si no configuras Gmail, los emails se simulan en logs (fallback automático).
 
 ### Backend Completado ✅
 
-El backend del sistema está prácticamente completo con todas las funcionalidades core implementadas. Las siguientes características son **opcionales** para mejoras futuras:
-
-**Mejoras Opcionales:**
-- [ ] **Limpieza automática de tokens expirados** (@Scheduled cada hora)
-- [ ] Búsqueda y filtrado avanzado de eventos (por categoría, fecha, ubicación)
-- [ ] Pruebas de carga y estrés (stress testing)
-- [ ] Auditoría persistente en base de datos (tabla audit_log)
-- [ ] Correlation IDs para trazabilidad distribuida
-- [ ] Observabilidad completa (Actuator + Prometheus + Grafana)
-- [ ] Docker Compose para todos los servicios
-- [ ] CI/CD pipeline
-- [ ] Tests unitarios y de integración más exhaustivos
-- [ ] **Rate limiting en password reset** (protección contra ataques de fuerza bruta)
-- [ ] Configuración HTTPS en producción
-- [ ] Sistema de reembolsos automáticos
+El backend del sistema está prácticamente completo con todas las funcionalidades core implementadas. 
 
 ## 🐛 Solución de Problemas
 
@@ -539,6 +570,6 @@ Proyecto académico - Sistema de Venta de Entradas SOA
 
 ---
 
-✅ **Sistema funcional y probado - Backend al 98%**
+✅ **Sistema funcional y probado**
 
 Última actualización: 2025-12-07

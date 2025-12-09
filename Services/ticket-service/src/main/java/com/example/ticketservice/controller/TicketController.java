@@ -27,23 +27,30 @@ public class TicketController {
     }
 
     @GetMapping("/{ticketId}")
-    @Operation(summary = "Obtener ticket por ID", description = "Obtiene un ticket específico por su ID")
-    public ResponseEntity<TicketResponse> obtenerTicket(@PathVariable String ticketId) {
-        TicketResponse response = ticketService.obtenerTicketPorId(ticketId);
+    @Operation(summary = "Obtener ticket por ID", description = "Obtiene un ticket específico por su ID (solo propietario o ADMIN)")
+    public ResponseEntity<TicketResponse> obtenerTicket(
+            @PathVariable String ticketId,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestHeader(value = "X-User-Role", required = false) String userRole) {
+        TicketResponse response = ticketService.obtenerTicketPorIdConValidacion(ticketId, userId, userRole);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{usuarioId}")
-    @Operation(summary = "Obtener tickets por usuario", description = "Obtiene todos los tickets de un usuario")
-    public ResponseEntity<List<TicketResponse>> obtenerTicketsPorUsuario(@PathVariable Long usuarioId) {
-        List<TicketResponse> tickets = ticketService.obtenerTicketsPorUsuario(usuarioId);
+    @Operation(summary = "Obtener tickets por usuario", description = "Obtiene todos los tickets de un usuario (solo propio usuario o ADMIN)")
+    public ResponseEntity<List<TicketResponse>> obtenerTicketsPorUsuario(
+            @PathVariable Long usuarioId,
+            @RequestHeader(value = "X-User-Id", required = false) Long requestUserId,
+            @RequestHeader(value = "X-User-Role", required = false) String userRole) {
+        List<TicketResponse> tickets = ticketService.obtenerTicketsPorUsuarioConValidacion(usuarioId, requestUserId, userRole);
         return ResponseEntity.ok(tickets);
     }
 
     @GetMapping
-    @Operation(summary = "Obtener todos los tickets", description = "Obtiene todos los tickets del sistema")
-    public ResponseEntity<List<TicketResponse>> obtenerTodosLosTickets() {
-        List<TicketResponse> tickets = ticketService.obtenerTodosLosTickets();
+    @Operation(summary = "Obtener todos los tickets", description = "Obtiene todos los tickets del sistema (solo ADMIN)")
+    public ResponseEntity<List<TicketResponse>> obtenerTodosLosTickets(
+            @RequestHeader(value = "X-User-Role", required = false) String userRole) {
+        List<TicketResponse> tickets = ticketService.obtenerTodosLosTicketsConValidacion(userRole);
         return ResponseEntity.ok(tickets);
     }
 }

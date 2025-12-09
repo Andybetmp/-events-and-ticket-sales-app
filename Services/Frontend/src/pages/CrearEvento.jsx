@@ -189,12 +189,12 @@ export default function CrearEvento() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white rounded-xl shadow-lg p-12 max-w-md text-center">
-          <CheckCircleIcon className="h-20 w-20 text-green-500 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">¡Evento Creado!</h2>
+          <CheckCircleIcon className="h-20 w-20 text-teal-500 mx-auto mb-6" />
+          <h2 className="text-3xl font-black text-gray-900 mb-4">¡Evento Creado!</h2>
           <p className="text-gray-600 mb-6">
             Tu evento ha sido publicado exitosamente. Redirigiendo...
           </p>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
         </div>
       </div>
     );
@@ -204,15 +204,15 @@ export default function CrearEvento() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Crear Nuevo Evento</h1>
-          <p className="text-gray-600">Completa la información para publicar tu evento</p>
+          <h1 className="text-4xl font-black text-gray-900 mb-2">Crear Evento</h1>
+          <p className="text-gray-600 text-lg">Completa la información para publicar tu evento</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Información del Evento */}
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-              <DocumentTextIcon className="h-6 w-6 mr-2 text-primary-600" />
+            <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center">
+              <DocumentTextIcon className="h-6 w-6 mr-2 text-teal-600" />
               Información del Evento
             </h2>
 
@@ -227,7 +227,7 @@ export default function CrearEvento() {
                   value={formData.nombre}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   placeholder="Ej: Concierto de Rock 2025"
                 />
               </div>
@@ -241,7 +241,7 @@ export default function CrearEvento() {
                   value={formData.descripcion}
                   onChange={handleInputChange}
                   rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   placeholder="Describe tu evento..."
                 />
               </div>
@@ -252,13 +252,13 @@ export default function CrearEvento() {
                   Imagen del Evento
                 </label>
                 {!imagePreview ? (
-                  <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-primary-500 transition-colors">
+                  <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-teal-500 transition-colors">
                     <div className="space-y-1 text-center">
                       <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
                       <div className="flex text-sm text-gray-600">
                         <label
                           htmlFor="file-upload"
-                          className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-teal-600 hover:text-teal-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-teal-500"
                         >
                           <span>Subir imagen</span>
                           <input
@@ -304,7 +304,7 @@ export default function CrearEvento() {
                   value={formData.fechaEvento}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
 
@@ -319,7 +319,7 @@ export default function CrearEvento() {
                   value={formData.ubicacion}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   placeholder="Ej: Estadio Nacional, Lima"
                 />
               </div>
@@ -333,7 +333,7 @@ export default function CrearEvento() {
                   name="categoria"
                   value={formData.categoria}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 >
                   {categorias.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -349,7 +349,7 @@ export default function CrearEvento() {
                   name="estado"
                   value={formData.estado}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 >
                   <option value="ACTIVO">Activo</option>
                   <option value="CANCELADO">Cancelado</option>
@@ -362,14 +362,14 @@ export default function CrearEvento() {
           {/* Tipos de Entrada */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                <TagIcon className="h-6 w-6 mr-2 text-primary-600" />
+              <h2 className="text-xl font-black text-gray-900 flex items-center">
+                <TagIcon className="h-6 w-6 mr-2 text-teal-600" />
                 Tipos de Entrada
               </h2>
               <button
                 type="button"
                 onClick={agregarTipoEntrada}
-                className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-sm font-medium"
+                className="flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition text-sm font-bold"
               >
                 <PlusIcon className="h-5 w-5 mr-1" />
                 Agregar Tipo
@@ -401,7 +401,7 @@ export default function CrearEvento() {
                         type="text"
                         value={tipo.nombre}
                         onChange={(e) => handleTipoEntradaChange(index, 'nombre', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                         placeholder="Ej: VIP, General, Preferencial"
                       />
                     </div>
@@ -414,7 +414,7 @@ export default function CrearEvento() {
                         type="text"
                         value={tipo.descripcion}
                         onChange={(e) => handleTipoEntradaChange(index, 'descripcion', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                         placeholder="Descripción opcional"
                       />
                     </div>
@@ -429,7 +429,7 @@ export default function CrearEvento() {
                         step="0.01"
                         value={tipo.precio}
                         onChange={(e) => handleTipoEntradaChange(index, 'precio', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                         placeholder="0.00"
                       />
                     </div>
@@ -443,7 +443,7 @@ export default function CrearEvento() {
                         min="0"
                         value={tipo.cantidadDisponible}
                         onChange={(e) => handleTipoEntradaChange(index, 'cantidadDisponible', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                         placeholder="0"
                       />
                     </div>
@@ -473,7 +473,7 @@ export default function CrearEvento() {
             <button
               type="submit"
               disabled={loading || uploadingImage}
-              className="px-8 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold shadow-lg hover:shadow-xl"
+              className="px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-bold shadow-lg hover:shadow-xl"
             >
               {uploadingImage ? (
                 <span className="flex items-center">

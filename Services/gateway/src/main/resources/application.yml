@@ -493,7 +493,7 @@ spring:
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
         
-        # Listar todos los tickets (requiere JWT, uso administrativo)
+        # Listar todos los tickets (solo ADMIN)
         - id: ticket-list
           uri: http://localhost:8086
           predicates:
@@ -502,8 +502,11 @@ spring:
           filters:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
+            - name: RoleAuthorizationFilter
+              args:
+                roles: ADMIN
         
-        # Obtener ticket por ID (requiere JWT)
+        # Obtener ticket por ID (requiere JWT - TODO: validar ownership o ADMIN)
         - id: ticket-get-by-id
           uri: http://localhost:8086
           predicates:
@@ -513,7 +516,7 @@ spring:
             - AddRequestHeader=X-Gateway-Secret, ${gateway.secret}
             - name: JwtAuthenticationFilter
         
-        # Obtener tickets por usuario (requiere JWT)
+        # Obtener tickets por usuario (requiere JWT - TODO: validar self-access o ADMIN)
         - id: ticket-list-by-user
           uri: http://localhost:8086
           predicates:

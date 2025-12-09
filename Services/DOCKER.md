@@ -51,18 +51,28 @@ Los servicios tardan ~30-60 segundos en estar completamente listos.
 docker-compose ps
 ```
 
-Deberías ver 8 contenedores:
+Deberías ver 9 contenedores:
 - `soa-mysql` (puerto 3306)
 - `soa-gateway` (puerto 8080)
 - `soa-user-service` (puerto 8081)
 - `soa-event-service` (puerto 8082)
-- `soa-orchestration-service` (puerto 8083)
+- `soa-camunda-service` (puerto 8083)
 - `soa-payment-service` (puerto 8084)
 - `soa-notification-service` (puerto 8085)
 - `soa-ticket-service` (puerto 8086)
+- `soa-image-service` (puerto 8087)
+- `soa-frontend` (puerto 80)
 
 ### 4. Probar el Sistema
 
+**Acceder a la aplicación web:**
+```
+Abrir navegador en: http://localhost
+```
+
+El frontend React estará disponible en el puerto 80 y se comunicará automáticamente con el Gateway en el puerto 8080.
+
+**Pruebas desde la terminal:**
 ```bash
 # Ejecutar test E2E (desde el host, no dentro del contenedor)
 .\test-e2e.ps1
@@ -157,24 +167,37 @@ docker-compose exec mysql mysql -uroot -proot ticket_db -e "SELECT * FROM ticket
 ## 📊 Arquitectura Docker
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Docker Network (soa-network)           │
-│                                                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │ Gateway  │  │   User   │  │  Event   │  │  Ticket  │   │
-│  │  :8080   │  │  :8081   │  │  :8082   │  │  :8086   │   │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
-│       │             │             │             │          │
-│  ┌────┴─────────────┴─────────────┴─────────────┴─────┐   │
-│  │          Orchestration Service :8083              │   │
-│  └────┬─────────────┬─────────────────┬─────────────┘   │
-│       │             │                 │                  │
-│  ┌────┴─────┐  ┌────┴────┐  ┌─────────┴──────┐          │
-│  │ Payment  │  │  Notif  │  │     MySQL      │          │
-│  │  :8084   │  │  :8085  │  │     :3306      │          │
-│  └──────────┘  └─────────┘  └────────────────┘          │
-│                                                           │
-└───────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                  Docker Network (soa-network)                   │
+│                                                                 │
+│  ┌──────────────┐                                              │
+│  │   Frontend   │  ← http://localhost (Puerto 80)              │
+│  │   (Nginx)    │                                              │
+│  └──────┬───────┘                                              │
+│         │                                                       │
+│  ┌──────▼───────────────────────────────────────────────┐      │
+│  │              Gateway :8080                           │      │
+│  │           (JWT + Enrutamiento)                       │      │
+│  └──────┬───────────────────┬──────────────┬───────────┘      │
+│         │                   │              │                   │
+│  ┌──────▼──┐  ┌──────▼──┐  ┌──▼──────┐  ┌─▼────────┐         │
+│  │  User   │  │  Event  │  │ Ticket  │  │  Image   │         │
+│  │  :8081  │  │  :8082  │  │ :8086   │  │  :8087   │         │
+│  └────┬────┘  └────┬────┘  └────┬────┘  └──────────┘         │
+│       │            │            │                              │
+│  ┌────▼────────────▼────────────▼─────────────────┐           │
+│  │        Camunda Service :8083                    │           │
+│  │         (Coordinador SAGA)                      │           │
+│  └────┬─────────────┬──────────────┬───────────────┘           │
+│       │             │              │                           │
+│  ┌────▼─────┐  ┌────▼────┐  ┌──────▼───────┐                 │
+│  │ Payment  │  │  Notif  │  │    MySQL     │                 │
+│  │  :8084   │  │  :8085  │  │    :3306     │                 │
+│  └──────────┘  └─────────┘  └──────────────┘                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+Usuario → Frontend (Nginx) → Gateway → Microservicios → MySQL
 ```
 
 ## 🔧 Variables de Entorno
@@ -194,7 +217,7 @@ Configuradas en `docker-compose.yml`:
 
 Cada servicio necesita un `Dockerfile` en su directorio:
 
-**Ejemplo para user-service:**
+**Ejemplo para servicios backend (user-service, event-service, etc.):**
 ```dockerfile
 FROM openjdk:17-jdk-slim
 WORKDIR /app
@@ -203,14 +226,32 @@ EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
+**Dockerfile para Frontend (React + Vite):**
+```dockerfile
+# Etapa 1: Build
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Etapa 2: Production con Nginx
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
 **Para crear Dockerfiles para todos los servicios:**
 ```bash
-# Compilar primero
+# Compilar servicios backend
 cd user-service && mvn clean package -DskipTests && cd ..
 cd event-service && mvn clean package -DskipTests && cd ..
-# ... (todos los servicios)
+# ... (todos los servicios backend)
 
-# Crear Dockerfile en cada servicio (ver ejemplo arriba)
+# El frontend se compila automáticamente dentro del contenedor Docker
 ```
 
 ## 🐛 Troubleshooting
@@ -241,24 +282,43 @@ docker-compose up -d
 
 ### Cambié código pero no se refleja
 ```bash
-# Recompilar Maven
+# Para servicios backend:
+# 1. Recompilar Maven
 cd service-name
 mvn clean package -DskipTests
 
-# Reconstruir imagen Docker
+# 2. Reconstruir imagen Docker
 cd ..
 docker-compose up -d --build service-name
+
+# Para el frontend:
+# Solo reconstruir (el build se hace dentro del Docker)
+docker-compose up -d --build frontend
+```
+
+### El frontend no carga o muestra error de API
+```bash
+# Verificar que el Gateway está corriendo
+docker-compose logs gateway
+
+# Verificar la configuración de Nginx
+docker-compose exec frontend cat /etc/nginx/conf.d/default.conf
+
+# Reiniciar frontend y gateway
+docker-compose restart frontend gateway
 ```
 
 ## 🎯 Ventajas vs Ejecución Local
 
-| Aspecto | Local (XAMPP + Maven) | Docker Compose |
+| Aspecto | Local (XAMPP + Maven + npm) | Docker Compose |
 |---------|----------------------|----------------|
 | **Setup inicial** | 30+ minutos | 5 minutos |
-| **Comandos para iniciar** | 7+ comandos | 1 comando |
+| **Comandos para iniciar** | 8+ comandos (backend + frontend) | 1 comando |
 | **Limpieza de entorno** | Manual | `docker-compose down -v` |
 | **Portabilidad** | Requiere configurar cada máquina | Funciona en cualquier OS con Docker |
 | **Escalabilidad** | Manual | Escalar con `docker-compose up --scale` |
+| **Gestión de puertos** | Manual (8080-8086 + 5173) | Automático |
+| **Networking** | localhost con proxies | Red Docker interna |
 
 ## 📚 Referencias
 
@@ -268,4 +328,9 @@ docker-compose up -d --build service-name
 
 ---
 
-✅ Con Docker Compose, todo el sistema SOA se ejecuta con **un solo comando**.
+✅ Con Docker Compose, todo el sistema SOA (backend + frontend) se ejecuta con **un solo comando**.
+
+**Acceso rápido:**
+- 🌐 **Frontend**: http://localhost
+- 🔧 **Gateway API**: http://localhost:8080
+- 📊 **Swagger UI**: http://localhost:8081/swagger-ui.html (y otros servicios)

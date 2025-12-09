@@ -63,11 +63,6 @@ function App() {
           } />
           <Route path="/admin" element={
             <ProtectedRoute>
-              <Perfil />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin" element={
-            <ProtectedRoute>
               <AdminPanel />
             </ProtectedRoute>
           } />

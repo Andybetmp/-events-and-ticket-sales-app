@@ -9,6 +9,7 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { isAdmin } from '../utils/roleUtils';
+import { logger } from '../utils/logger';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function AdminPanel() {
         totalUsuarios: 0 // Pendiente endpoint
       });
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      logger.error('Error cargando estadísticas:', error);
     } finally {
       setLoading(false);
     }
@@ -55,7 +56,7 @@ export default function AdminPanel() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
       </div>
     );
   }
@@ -79,24 +80,24 @@ export default function AdminPanel() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Total Usuarios */}
-          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-teal-500">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm font-medium">Total Usuarios</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalUsuarios}</p>
               </div>
-              <UserGroupIcon className="h-12 w-12 text-blue-500 opacity-75" />
+              <UserGroupIcon className="h-12 w-12 text-teal-500 opacity-75" />
             </div>
           </div>
 
           {/* Total Eventos */}
-          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
+          <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-gray-900">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm font-medium">Total Eventos</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalEventos}</p>
               </div>
-              <CalendarIcon className="h-12 w-12 text-purple-500 opacity-75" />
+              <CalendarIcon className="h-12 w-12 text-gray-900 opacity-75" />
             </div>
           </div>
 
@@ -129,23 +130,23 @@ export default function AdminPanel() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center space-x-3 p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition"
+              className="flex items-center space-x-3 p-4 bg-gradient-to-r from-gray-900 to-black text-white rounded-lg hover:from-black hover:to-gray-800 transition"
             >
               <CalendarIcon className="h-6 w-6" />
               <div className="text-left">
                 <p className="font-semibold">Gestionar Eventos</p>
-                <p className="text-sm text-purple-100">Ver y editar todos los eventos</p>
+                <p className="text-sm text-gray-300">Ver y editar todos los eventos</p>
               </div>
             </button>
 
             <button
               onClick={() => alert('Próximamente: Gestión de usuarios')}
-              className="flex items-center space-x-3 p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition"
+              className="flex items-center space-x-3 p-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg hover:from-teal-600 hover:to-teal-700 transition"
             >
               <UserGroupIcon className="h-6 w-6" />
               <div className="text-left">
                 <p className="font-semibold">Gestionar Usuarios</p>
-                <p className="text-sm text-blue-100">Administrar cuentas de usuario</p>
+                <p className="text-sm text-teal-100">Administrar cuentas de usuario</p>
               </div>
             </button>
 

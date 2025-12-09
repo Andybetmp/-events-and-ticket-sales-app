@@ -5,14 +5,24 @@ import {
   ChartBarIcon,
   TicketIcon,
   CurrencyDollarIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
+import { logger } from '../utils/logger';
 
 const MisEventos = () => {
   const [eventos, setEventos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedStats, setExpandedStats] = useState({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState({ title: '', message: '', type: 'success' });
+  const [eventoToCancel, setEventoToCancel] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const eventsPerPage = 5;
 
   useEffect(() => {
     fetchMisEventos();
@@ -61,22 +71,36 @@ const MisEventos = () => {
   };
 
   const handleCancelarEvento = async (eventoId) => {
-    if (!window.confirm('¿Estás seguro de que quieres cancelar este evento?')) {
-      return;
-    }
+    setEventoToCancel(eventoId);
+    setShowConfirmModal(true);
+  };
 
+  const confirmarCancelacion = async () => {
+    setShowConfirmModal(false);
+    
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/eventos/${eventoId}`, {
+      await axios.delete(`/api/eventos/${eventoToCancel}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert('Evento cancelado exitosamente');
-      fetchMisEventos(); // Recargar lista
+      setModalMessage({
+        title: '¡Evento Cancelado!',
+        message: 'El evento ha sido cancelado exitosamente.',
+        type: 'success'
+      });
+      setShowMessageModal(true);
+      fetchMisEventos();
     } catch (err) {
       console.error('Error al cancelar evento:', err);
-      alert(err.response?.data?.mensaje || 'No se pudo cancelar el evento');
+      setModalMessage({
+        title: 'Error',
+        message: err.response?.data?.mensaje || 'No se pudo cancelar el evento',
+        type: 'error'
+      });
+      setShowMessageModal(true);
     }
+    setEventoToCancel(null);
   };
 
   const getEstadoBadge = (estado) => {
@@ -136,10 +160,21 @@ const MisEventos = () => {
     };
   };
 
+  // Paginación
+  const indexOfLastEvent = currentPage * eventsPerPage;
+  const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
+  const currentEvents = eventos.slice(indexOfFirstEvent, indexOfLastEvent);
+  const totalPages = Math.ceil(eventos.length / eventsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
       </div>
     );
   }
@@ -148,12 +183,12 @@ const MisEventos = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Mis Eventos</h1>
-          <p className="mt-2 text-gray-600">Gestiona los eventos que has creado</p>
+          <h1 className="text-4xl font-black text-gray-900">Mis Eventos</h1>
+          <p className="mt-2 text-gray-600 text-lg">Gestiona los eventos que has creado</p>
         </div>
         <Link
           to="/crear-evento"
-          className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
+          className="bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition font-bold shadow-lg"
         >
           + Crear Evento
         </Link>
@@ -180,22 +215,23 @@ const MisEventos = () => {
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <h3 className="mt-2 text-lg font-medium text-gray-900">No tienes eventos</h3>
+          <h3 className="mt-2 text-lg font-bold text-gray-900">No tienes eventos</h3>
           <p className="mt-1 text-gray-500">Comienza creando tu primer evento</p>
           <div className="mt-6">
             <Link
               to="/crear-evento"
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              className="inline-flex items-center px-6 py-3 border border-transparent shadow-lg text-sm font-bold rounded-lg text-white bg-black hover:bg-gray-800"
             >
               + Crear Evento
             </Link>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6">
-          {eventos.map((evento) => {
-            const stats = calcularEstadisticas(evento);
-            const isStatsExpanded = expandedStats[evento.id];
+        <>
+          <div className="grid grid-cols-1 gap-6">
+            {currentEvents.map((evento) => {
+              const stats = calcularEstadisticas(evento);
+              const isStatsExpanded = expandedStats[evento.id];
 
             return (
             <div
@@ -221,13 +257,13 @@ const MisEventos = () => {
                     
                     {/* Estadísticas resumidas */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      <div className="bg-blue-50 rounded-lg p-3">
+                      <div className="bg-teal-50 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <TicketIcon className="h-5 w-5 text-blue-600" />
-                          <p className="text-xs text-blue-600 font-medium">Entradas Vendidas</p>
+                          <TicketIcon className="h-5 w-5 text-teal-600" />
+                          <p className="text-xs text-teal-600 font-medium">Entradas Vendidas</p>
                         </div>
-                        <p className="text-2xl font-bold text-blue-900">{stats.vendidas}</p>
-                        <p className="text-xs text-blue-700">{stats.porcentajeVendido.toFixed(1)}% del total</p>
+                        <p className="text-2xl font-bold text-teal-900">{stats.vendidas}</p>
+                        <p className="text-xs text-teal-700">{stats.porcentajeVendido.toFixed(1)}% del total</p>
                       </div>
                       
                       <div className="bg-green-50 rounded-lg p-3">
@@ -239,13 +275,13 @@ const MisEventos = () => {
                         <p className="text-xs text-green-700">De {stats.vendidas} tickets</p>
                       </div>
                       
-                      <div className="bg-purple-50 rounded-lg p-3">
+                      <div className="bg-teal-50 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <UserGroupIcon className="h-5 w-5 text-purple-600" />
-                          <p className="text-xs text-purple-600 font-medium">Disponibles</p>
+                          <UserGroupIcon className="h-5 w-5 text-teal-600" />
+                          <p className="text-xs text-teal-600 font-medium">Disponibles</p>
                         </div>
-                        <p className="text-2xl font-bold text-purple-900">{stats.disponibles}</p>
-                        <p className="text-xs text-purple-700">De {stats.totalCapacidad} total</p>
+                        <p className="text-2xl font-bold text-teal-900">{stats.disponibles}</p>
+                        <p className="text-xs text-teal-700">De {stats.totalCapacidad} total</p>
                       </div>
                       
                       <div className="bg-orange-50 rounded-lg p-3">
@@ -264,14 +300,14 @@ const MisEventos = () => {
                       className="w-full py-2 px-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition flex items-center justify-center gap-2 text-sm font-medium text-gray-700 mb-4"
                     >
                       <ChartBarIcon className="h-4 w-4" />
-                      {isStatsExpanded ? 'Ocultar estadísticas detalladas' : 'Ver estadísticas detalladas'}
+                      {isStatsExpanded ? 'Ocultar estadísticas detalladas' : 'Ver detalles'}
                     </button>
 
                     {/* Estadísticas detalladas por tipo de entrada */}
                     {isStatsExpanded && stats.detallesPorTipo.length > 0 && (
                       <div className="bg-gray-50 rounded-lg p-4 mb-4">
                         <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                          <ChartBarIcon className="h-5 w-5 text-indigo-600" />
+                          <ChartBarIcon className="h-5 w-5 text-teal-600" />
                           Desglose por Tipo de Entrada
                         </h4>
                         <div className="space-y-3">
@@ -283,7 +319,7 @@ const MisEventos = () => {
                                   <p className="text-sm text-gray-600">S/ {detalle.precio.toFixed(2)} por entrada</p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-bold text-indigo-600">S/ {detalle.ingresos.toFixed(2)}</p>
+                                  <p className="font-bold text-teal-600">S/ {detalle.ingresos.toFixed(2)}</p>
                                   <p className="text-xs text-gray-500">Ingresos</p>
                                 </div>
                               </div>
@@ -296,16 +332,16 @@ const MisEventos = () => {
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                   <div
-                                    className="bg-indigo-600 h-2 rounded-full transition-all"
+                                    className="bg-teal-600 h-2 rounded-full transition-all"
                                     style={{ width: `${detalle.porcentaje}%` }}
                                   ></div>
                                 </div>
                               </div>
                               
                               <div className="grid grid-cols-3 gap-2 text-xs">
-                                <div className="text-center bg-blue-50 rounded py-1">
-                                  <p className="text-blue-900 font-semibold">{detalle.vendidas}</p>
-                                  <p className="text-blue-600">Vendidas</p>
+                                <div className="text-center bg-teal-50 rounded py-1">
+                                  <p className="text-teal-900 font-semibold">{detalle.vendidas}</p>
+                                  <p className="text-teal-600">Vendidas</p>
                                 </div>
                                 <div className="text-center bg-green-50 rounded py-1">
                                   <p className="text-green-900 font-semibold">{detalle.disponibles}</p>
@@ -381,7 +417,7 @@ const MisEventos = () => {
                 <div className="mt-6 flex gap-3">
                   <Link
                     to={`/evento/${evento.id}`}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition shadow-md hover:shadow-lg"
                   >
                     Ver Detalles
                   </Link>
@@ -390,13 +426,13 @@ const MisEventos = () => {
                     <>
                       <Link
                         to={`/editar-evento/${evento.id}`}
-                        className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition"
+                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition shadow-md hover:shadow-lg"
                       >
                         Editar
                       </Link>
                       <button
                         onClick={() => handleCancelarEvento(evento.id)}
-                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition shadow-md hover:shadow-lg"
                       >
                         Cancelar Evento
                       </button>
@@ -405,7 +441,7 @@ const MisEventos = () => {
                   
                   {evento.estado === 'ACTIVO' && new Date(evento.fechaEvento) < new Date() && (
                     <button
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition shadow-md hover:shadow-lg"
                     >
                       Finalizar Evento
                     </button>
@@ -414,7 +450,121 @@ const MisEventos = () => {
               </div>
             </div>
             );
-          })}
+            })}
+          </div>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex justify-center items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow-sm'
+                }`}
+              >
+                ← Anterior
+              </button>
+
+              <div className="flex gap-1">
+                {[...Array(totalPages)].map((_, index) => {
+                  const pageNumber = index + 1;
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => handlePageChange(pageNumber)}
+                      className={`px-4 py-2 rounded-lg font-medium transition ${
+                        currentPage === pageNumber
+                          ? 'bg-black text-white shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 shadow-sm'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow-sm'
+                }`}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Modal de Confirmación */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-3">
+                <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 text-center">¿Cancelar Evento?</h3>
+            <p className="text-gray-600 mb-6 text-center">
+              Esta acción no se puede deshacer. El evento será marcado como cancelado.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setEventoToCancel(null);
+                }}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-bold"
+              >
+                No, mantener
+              </button>
+              <button
+                onClick={confirmarCancelacion}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-bold shadow-lg"
+              >
+                Sí, cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Mensaje */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <button
+              onClick={() => setShowMessageModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+            <div className="flex items-center justify-center mb-4">
+              <div className={`rounded-full p-3 ${modalMessage.type === 'success' ? 'bg-teal-100' : 'bg-red-100'}`}>
+                {modalMessage.type === 'success' ? (
+                  <CheckCircleIcon className="h-8 w-8 text-teal-600" />
+                ) : (
+                  <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
+                )}
+              </div>
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 text-center">{modalMessage.title}</h3>
+            <p className="text-gray-600 mb-6 text-center">{modalMessage.message}</p>
+            <button
+              onClick={() => setShowMessageModal(false)}
+              className="w-full px-4 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition font-bold shadow-lg"
+            >
+              Entendido
+            </button>
+          </div>
         </div>
       )}
     </div>

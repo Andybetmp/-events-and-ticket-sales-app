@@ -1,6 +1,7 @@
 package com.example.userservice.service;
 
 import com.example.userservice.exception.InvalidTokenException;
+import com.example.userservice.exception.TooManyRequestsException;
 import com.example.userservice.exception.UserNotFoundException;
 import com.example.userservice.model.PasswordResetToken;
 import com.example.userservice.model.User;
@@ -28,6 +29,7 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RestTemplate restTemplate;
+    private final RateLimitService rateLimitService;
     
     @Value("${services.notification-service.url:http://localhost:8085}")
     private String notificationServiceUrl;
@@ -37,7 +39,21 @@ public class PasswordResetService {
     
     @Transactional
     public void requestPasswordReset(String email) {
-        // Por seguridad, no revelamos si el email existe o no (prevenir enumeración de usuarios)
+        log.info("🔑 Solicitud de restablecimiento de contraseña para: {}", email);
+        
+        // PASO 1: Verificar rate limiting (máximo 3 intentos cada 15 minutos)
+        if (!rateLimitService.canRequestPasswordReset(email)) {
+            long minutesLeft = rateLimitService.getRemainingWaitMinutes(email);
+            log.warn("Rate limit excedido para: {} | Esperar {} minutos", email, minutesLeft);
+            throw new TooManyRequestsException(
+                String.format("Has excedido el límite de solicitudes. Por favor espera %d minutos antes de intentar nuevamente.", 
+                    minutesLeft));
+        }
+        
+        // PASO 2: Registrar el intento
+        rateLimitService.recordPasswordResetAttempt(email);
+        
+        // PASO 3: Buscar usuario (por seguridad, no revelamos si existe)
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             log.warn("Solicitud de reset para email no registrado: {}", email);

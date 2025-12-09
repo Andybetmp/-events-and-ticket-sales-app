@@ -1,0 +1,75 @@
+/* Estilos de impresión para tickets */
+@media print {
+  /* Ocultar elementos innecesarios al imprimir */
+  nav,
+  footer,
+  button:not(.print-keep),
+  .no-print {
+    display: none !important;
+  }
+
+  /* Configuración de página */
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  /* Reset de fondos y colores */
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Mantener un ticket por página */
+  .ticket-container {
+    page-break-after: always;
+    page-break-inside: avoid;
+    margin: 0;
+    padding: 20px;
+    background: white !important;
+  }
+
+  /* Asegurar que los códigos QR se impriman */
+  img[alt="QR Code"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    max-width: 200px !important;
+    max-height: 200px !important;
+  }
+
+  /* Mejorar legibilidad del texto */
+  h1, h2, h3, h4, h5, h6 {
+    color: black !important;
+  }
+
+  /* Asegurar que los fondos de color se impriman */
+  .bg-gradient-to-r,
+  .bg-gradient-to-br,
+  .bg-teal-500,
+  .bg-teal-600,
+  .bg-green-100,
+  .bg-gray-50 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Bordes y líneas */
+  .border,
+  .border-t,
+  .border-b {
+    border-color: #d1d5db !important;
+  }
+
+  /* Espaciado mejorado para impresión */
+  .space-y-4 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  /* Evitar cortes de página en elementos importantes */
+  .ticket-details,
+  .qr-section {
+    page-break-inside: avoid;
+  }
+}

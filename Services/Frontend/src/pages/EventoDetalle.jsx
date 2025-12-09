@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { logger } from '../utils/logger';
 import {
   CalendarIcon,
   MapPinIcon,
@@ -20,6 +21,8 @@ export default function EventoDetalle() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cantidades, setCantidades] = useState({});
+  
+  const MAX_ENTRADAS_POR_COMPRA = 5; // Límite máximo de entradas por transacción
 
   useEffect(() => {
     cargarEvento();
@@ -31,7 +34,7 @@ export default function EventoDetalle() {
       const response = await axios.get(`/api/eventos/${id}`);
       setEvento(response.data);
     } catch (err) {
-      console.error('Error cargando evento:', err);
+      logger.error('Error cargando evento:', err);
       setError('No se pudo cargar el evento');
     } finally {
       setLoading(false);
@@ -55,6 +58,14 @@ export default function EventoDetalle() {
   };
 
   const incrementarCantidad = (tipoId, cantidadDisponible) => {
+    const totalActual = getTotalTickets();
+    
+    // Verificar si ya se alcanzó el límite máximo
+    if (totalActual >= MAX_ENTRADAS_POR_COMPRA) {
+      alert(`Máximo ${MAX_ENTRADAS_POR_COMPRA} entradas por compra`);
+      return;
+    }
+    
     setCantidades(prev => ({
       ...prev,
       [tipoId]: Math.min((prev[tipoId] || 0) + 1, cantidadDisponible)
@@ -200,7 +211,7 @@ export default function EventoDetalle() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando evento...</p>
         </div>
       </div>
@@ -214,7 +225,7 @@ export default function EventoDetalle() {
           <p className="text-red-600 text-lg mb-4">{error || 'Evento no encontrado'}</p>
           <button
             onClick={() => navigate('/')}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition"
+            className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition"
           >
             Volver a Eventos
           </button>
@@ -224,196 +235,241 @@ export default function EventoDetalle() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header del Evento */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-          {/* Imagen del evento si existe */}
-          {evento.imagenUrl && evento.imagenUrl.trim() !== '' && (
-            <div className="h-96 overflow-hidden">
-              <img 
-                src={evento.imagenUrl} 
-                alt={evento.nombre}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  console.error('Error cargando imagen en detalle:', evento.imagenUrl);
-                  e.target.parentElement.style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-          
-          <div className={`${evento.imagenUrl ? 'bg-white' : 'bg-gradient-to-r from-primary-600 to-purple-700'} px-8 py-12`}>
-            <button
-              onClick={() => navigate('/')}
-              className={`${evento.imagenUrl ? 'text-primary-600' : 'text-white'} mb-4 hover:underline`}
-            >
-              ← Volver a eventos
-            </button>
-            <h1 className={`text-4xl font-bold ${evento.imagenUrl ? 'text-gray-900' : 'text-white'} mb-2`}>
-              {evento.nombre}
-            </h1>
-            <div className="flex items-center space-x-2">
-              <span className={`${evento.imagenUrl ? 'bg-primary-100 text-primary-700' : 'bg-white/20 text-white'} px-3 py-1 rounded-full text-sm font-medium`}>
-                {evento.categoria || 'General'}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                evento.estado === 'ACTIVO' ? 'bg-green-500 text-white' :
-                evento.estado === 'CANCELADO' ? 'bg-red-500 text-white' :
-                'bg-gray-500 text-white'
-              }`}>
-                {evento.estado === 'ACTIVO' ? 'Disponible' : evento.estado}
-              </span>
-            </div>
-          </div>
-
-          <div className="px-8 py-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles del Evento</h2>
-                
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <CalendarIcon className="h-6 w-6 text-primary-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Fecha y Hora</p>
-                      <p className="text-gray-900 font-medium">
-                        {formatearFecha(evento.fechaEvento)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <MapPinIcon className="h-6 w-6 text-primary-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Ubicación</p>
-                      <p className="text-gray-900 font-medium">{evento.ubicacion}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <UserGroupIcon className="h-6 w-6 text-primary-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Organizador</p>
-                      <p className="text-gray-900 font-medium">{evento.organizador || 'No especificado'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Descripción</h2>
-                <p className="text-gray-700 leading-relaxed">
-                  {evento.descripcion || 'Descripción no disponible'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tipos de Entrada */}
-        <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Selecciona tus Entradas</h2>
-          
-          {/* Mensaje de evento no disponible */}
-          {evento.estado !== 'ACTIVO' && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    Este evento está <strong>{evento.estado}</strong> y no se pueden comprar entradas.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {tiposEntrada.length === 0 ? (
-            <div className="text-center py-8">
-              <TicketIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No hay tipos de entrada disponibles para este evento</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {tiposEntrada.map((tipo) => (
-                <div
-                  key={tipo.id}
-                  className="border border-gray-200 rounded-lg p-6 hover:border-primary-300 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <TagIcon className="h-5 w-5 text-primary-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">{tipo.nombre}</h3>
-                      </div>
-                      <p className="text-gray-600 text-sm mb-2">{tipo.descripcion || 'Entrada estándar'}</p>
-                      <div className="flex items-center space-x-4 text-sm">
-                        <span className="text-gray-600">
-                          Disponibles: <span className="font-medium text-gray-900">{tipo.cantidadDisponible}</span>
-                        </span>
-                        <span className="text-2xl font-bold text-primary-600">
-                          S/ {tipo.precio.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4 ml-6">
-                      <button
-                        onClick={() => decrementarCantidad(tipo.id)}
-                        disabled={evento.estado !== 'ACTIVO' || !cantidades[tipo.id] || cantidades[tipo.id] === 0}
-                        className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        <MinusIcon className="h-5 w-5 text-gray-700" />
-                      </button>
-                      
-                      <span className="text-xl font-bold text-gray-900 w-12 text-center">
-                        {cantidades[tipo.id] || 0}
-                      </span>
-                      
-                      <button
-                        onClick={() => incrementarCantidad(tipo.id, tipo.cantidadDisponible)}
-                        disabled={evento.estado !== 'ACTIVO' || cantidades[tipo.id] >= tipo.cantidadDisponible}
-                        className="p-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        <PlusIcon className="h-5 w-5 text-white" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Resumen y Checkout */}
-        {tiposEntrada.length > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-8 sticky bottom-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 mb-1">Total a pagar</p>
-                <p className="text-3xl font-bold text-primary-600">
-                  S/ {calcularTotal().toFixed(2)}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {getTotalTickets()} ticket(s) seleccionado(s)
-                </p>
-              </div>
-              
-              <button
-                onClick={handleComprar}
-                disabled={getTotalTickets() === 0 || evento.estado !== 'ACTIVO'}
-                className="bg-primary-600 text-white px-8 py-4 rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition font-semibold text-lg shadow-lg hover:shadow-xl"
-              >
-                {evento.estado !== 'ACTIVO' ? `Evento ${evento.estado}` : 'Continuar al Pago'}
-              </button>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Imagen Principal */}
+      <div className="relative h-[400px] bg-gradient-to-r from-teal-600 to-gray-900">
+        {evento.imagenUrl && evento.imagenUrl.trim() !== '' ? (
+          <img 
+            src={evento.imagenUrl} 
+            alt={evento.nombre}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <TicketIcon className="w-32 h-32 text-white opacity-20" />
           </div>
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 relative z-10 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Contenido Principal */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Título y Badge */}
+            <div className="bg-white rounded-lg shadow-md p-8">
+              <button
+                onClick={() => navigate('/')}
+                className="text-gray-600 mb-4 hover:text-gray-900 text-sm"
+              >
+                ← Volver
+              </button>
+              
+              <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded mb-4">
+                <span className="inline-block w-2 h-2 bg-green-600 rounded-full mr-2"></span>
+                {evento.categoria || 'General'}
+              </span>
+
+              <h1 className="text-3xl font-black text-gray-900 mb-4">
+                {evento.nombre}
+              </h1>
+
+              <div className="text-sm text-gray-600">
+                {formatearFecha(evento.fechaEvento)}
+              </div>
+            </div>
+
+            {/* Descripción */}
+            <div className="bg-white rounded-lg shadow-md p-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{evento.nombre}</h2>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                {evento.descripcion || 'Descripción no disponible'}
+              </p>
+
+              <button className="mt-4 text-teal-600 font-semibold text-sm hover:underline">
+                Leer más ↓
+              </button>
+            </div>
+
+            {/* Ubicación */}
+            <div className="bg-white rounded-lg shadow-md p-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Ubicación</h2>
+              
+              <div className="flex items-start space-x-3 mb-4">
+                <MapPinIcon className="h-5 w-5 text-gray-600 mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-gray-900">{evento.ubicacion?.split(',')[0] || evento.ubicacion}</p>
+                  <p className="text-sm text-gray-600">{evento.ubicacion}</p>
+                </div>
+              </div>
+
+              <button className="flex items-center space-x-2 text-gray-900 font-semibold text-sm border border-gray-300 rounded px-4 py-2 hover:bg-gray-50 transition">
+                <MapPinIcon className="h-4 w-4" />
+                <span>¿Cómo llegar?</span>
+              </button>
+            </div>
+
+            {/* Organiza */}
+            {evento.organizador && (
+              <div className="bg-white rounded-lg shadow-md p-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Organiza</h2>
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    {evento.organizador.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{evento.organizador}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar - Fecha y Entradas */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 space-y-4">
+              {/* Card de Fecha y Hora */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center">
+                  <CalendarIcon className="h-5 w-5 mr-2" />
+                  Fecha y Hora
+                </h3>
+                
+                {/* Selector de fecha (simulado por ahora) */}
+                <div className="space-y-2 mb-4">
+                  <button className="w-full text-left px-4 py-3 border-2 border-teal-500 bg-teal-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-600">
+                          {new Date(evento.fechaEvento).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' }).toUpperCase()}
+                        </p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {new Date(evento.fechaEvento).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <div className="w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                <button className="w-full text-teal-600 font-semibold text-sm hover:underline text-left">
+                  Ver más opciones →
+                </button>
+              </div>
+
+              {/* Card de Entradas */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center justify-between">
+                  <span className="flex items-center">
+                    <TicketIcon className="h-5 w-5 mr-2" />
+                    Entradas
+                  </span>
+                  <button className="text-teal-600 text-xs font-semibold hover:underline">
+                    ¿Tienes un código?
+                  </button>
+                </h3>
+
+                {evento.estado !== 'ACTIVO' ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-center">
+                    <p className="text-sm text-yellow-800 font-semibold">
+                      Evento {evento.estado}
+                    </p>
+                  </div>
+                ) : tiposEntrada.length === 0 ? (
+                  <div className="text-center py-8">
+                    <TicketIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">No hay entradas disponibles</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tiposEntrada.map((tipo) => (
+                      <div key={tipo.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-900 flex items-center">
+                              <TicketIcon className="h-4 w-4 mr-1" />
+                              {tipo.nombre}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {tipo.descripcion || 'Entrada estándar'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-lg font-bold text-gray-900">
+                              S/ {tipo.precio.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Disponibles: {tipo.cantidadDisponible}
+                            </p>
+                          </div>
+
+                          {tipo.cantidadDisponible === 0 ? (
+                            <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
+                              <span className="text-sm font-semibold text-red-600">
+                                Agotado
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={() => decrementarCantidad(tipo.id)}
+                                disabled={!cantidades[tipo.id] || cantidades[tipo.id] === 0}
+                                className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition"
+                              >
+                                <MinusIcon className="h-4 w-4 text-gray-700" />
+                              </button>
+                              
+                              <span className="text-lg font-bold text-gray-900 w-8 text-center">
+                                {cantidades[tipo.id] || 0}
+                              </span>
+                              
+                              <button
+                                onClick={() => incrementarCantidad(tipo.id, tipo.cantidadDisponible)}
+                                disabled={cantidades[tipo.id] >= tipo.cantidadDisponible || getTotalTickets() >= MAX_ENTRADAS_POR_COMPRA}
+                                className="w-8 h-8 rounded-full bg-black hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition"
+                              >
+                                <PlusIcon className="h-4 w-4 text-white" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Total y Botón de Compra */}
+                    {getTotalTickets() > 0 && (
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-sm text-gray-600">Total</span>
+                          <span className="text-2xl font-bold text-gray-900">
+                            S/ {calcularTotal().toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        <button
+                          onClick={handleComprar}
+                          className="w-full bg-black text-white py-3 rounded font-bold hover:bg-gray-800 transition"
+                        >
+                          Continuar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

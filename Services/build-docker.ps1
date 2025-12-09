@@ -6,11 +6,11 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "==========================================================="-ForegroundColor Cyan
-Write-Host "     COMPILANDO Y CONSTRUYENDO IMAGENES DOCKER             " -ForegroundColor Cyan
+Write-Host "  COMPILANDO Y CONSTRUYENDO IMAGENES DOCKER (Backend)      " -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Lista de servicios
+# Lista de servicios backend
 $services = @(
     "gateway",
     "user-service",
@@ -50,12 +50,14 @@ foreach ($service in $services) {
 
 Write-Host ""
 Write-Host "===========================================================" -ForegroundColor Cyan
-Write-Host "     CONSTRUYENDO IMAGENES DOCKER                          " -ForegroundColor Cyan
+Write-Host "     CONSTRUYENDO IMAGENES DOCKER (Backend + Frontend)    " -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Construir imágenes Docker
+# Construir imágenes Docker (incluye frontend)
 Write-Host "Construyendo imágenes con docker-compose..." -ForegroundColor Yellow
+Write-Host "  - Backend services (Java Spring Boot)" -ForegroundColor Gray
+Write-Host "  - Frontend (React + Vite + Nginx)" -ForegroundColor Gray
 docker-compose build --no-cache
 
 if ($LASTEXITCODE -ne 0) {
@@ -91,11 +93,14 @@ docker-compose ps
 
 Write-Host ""
 Write-Host "Comandos utiles:" -ForegroundColor Yellow
+Write-Host "  Abrir aplicacion:   http://localhost" -ForegroundColor Cyan
 Write-Host "  Ver logs:           docker-compose logs -f" -ForegroundColor White
 Write-Host "  Ver un servicio:    docker-compose logs -f gateway" -ForegroundColor White
+Write-Host "  Ver frontend:       docker-compose logs -f frontend" -ForegroundColor White
 Write-Host "  Detener todo:       docker-compose down" -ForegroundColor White
 Write-Host "  Estado:             docker-compose ps" -ForegroundColor White
 Write-Host ""
 Write-Host "Espera ~30 segundos para que todos los servicios esten listos" -ForegroundColor Yellow
-Write-Host "Luego prueba: .\test-e2e.ps1" -ForegroundColor Cyan
+Write-Host "Luego abre tu navegador en: http://localhost" -ForegroundColor Cyan
+Write-Host "O prueba desde terminal: .\test-e2e.ps1" -ForegroundColor Cyan
 Write-Host ""

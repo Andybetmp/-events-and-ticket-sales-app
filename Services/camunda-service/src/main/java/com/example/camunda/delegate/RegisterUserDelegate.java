@@ -31,6 +31,7 @@ public class RegisterUserDelegate implements JavaDelegate {
         String nombre = (String) execution.getVariable("nombre");
         String apellido = (String) execution.getVariable("apellido");
         String email = (String) execution.getVariable("email");
+        String telefono = (String) execution.getVariable("telefono");
         String contrasena = (String) execution.getVariable("contrasena");
 
         // Preparar request
@@ -38,6 +39,7 @@ public class RegisterUserDelegate implements JavaDelegate {
         requestBody.put("nombre", nombre);
         requestBody.put("apellido", apellido);
         requestBody.put("email", email);
+        requestBody.put("telefono", telefono);
         requestBody.put("contrasena", contrasena);
 
         HttpHeaders headers = new HttpHeaders();

@@ -14,8 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.List;
 
-// TEMPORALMENTE DESHABILITADO PARA DESARROLLO
-//@Component
+@Component
 @Order(1) // Ejecutar antes que otros filtros
 public class GatewayAuthFilter implements Filter {
 

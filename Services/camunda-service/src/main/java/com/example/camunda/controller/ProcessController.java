@@ -44,6 +44,7 @@ public class ProcessController {
             variables.put("nombre", request.get("nombre"));
             variables.put("apellido", request.get("apellido"));
             variables.put("email", request.get("email"));
+            variables.put("telefono", request.get("telefono"));
             variables.put("contrasena", request.get("contrasena"));
             
             ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
@@ -84,6 +85,7 @@ public class ProcessController {
             }
             
             Map<String, Object> response = new HashMap<>();
+            response.put("exitoso", true);
             response.put("usuario", usuario);
             response.put("token", token);
             
@@ -93,7 +95,10 @@ public class ProcessController {
             
         } catch (Exception e) {
             log.error("❌ Error en registro: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("exitoso", false);
+            errorResponse.put("mensaje", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 

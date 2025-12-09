@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -28,7 +28,15 @@ export default function Checkout() {
   const [focusedInput, setFocusedInput] = useState('');
 
   // Estado para el countdown timer
-  const [timeLeft, setTimeLeft] = useState(300); // 10 minutos en segundos
+  const [timeLeft, setTimeLeft] = useState(() => {
+    // Calcular tiempo restante desde el timestamp de expiración
+    const expirationTime = localStorage.getItem('checkout-expiration');
+    if (expirationTime) {
+      const remaining = Math.floor((parseInt(expirationTime) - Date.now()) / 1000);
+      return remaining > 0 ? remaining : 0;
+    }
+    return 300; // 5 minutos por defecto
+  });
   const [timerExpired, setTimerExpired] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
@@ -122,10 +130,26 @@ export default function Checkout() {
 
       // Configurar timer de expiración si hay reservas
       if (parsedData.reservas && parsedData.reservas.length > 0) {
-        const primeraReserva = parsedData.reservas[0];
-        const segundosRestantes = primeraReserva.segundosRestantes || 600;
-        console.log('Configurando timer con segundos restantes:', segundosRestantes);
-        setTimeLeft(segundosRestantes);
+        // Verificar si esta es una nueva sesión de checkout comparando IDs de reserva
+        const nuevaReservaId = String(parsedData.reservas[0].id);
+        const ultimaReservaId = localStorage.getItem('checkout-reserva-id');
+        
+        if (nuevaReservaId !== ultimaReservaId) {
+          // Nueva compra, establecer tiempo de expiración (5 minutos desde ahora)
+          console.log('Nueva compra detectada, estableciendo expiración a 5 minutos');
+          const expirationTime = Date.now() + (300 * 1000); // 5 minutos en milisegundos
+          localStorage.setItem('checkout-expiration', expirationTime.toString());
+          localStorage.setItem('checkout-reserva-id', nuevaReservaId);
+          setTimeLeft(300);
+        } else {
+          // Misma compra, calcular tiempo restante desde la expiración guardada
+          console.log('Misma compra, calculando tiempo restante');
+          const expirationTime = localStorage.getItem('checkout-expiration');
+          if (expirationTime) {
+            const remaining = Math.floor((parseInt(expirationTime) - Date.now()) / 1000);
+            setTimeLeft(remaining > 0 ? remaining : 0);
+          }
+        }
       }
     } catch (err) {
       console.error('Error parseando datos de checkout:', err);
@@ -136,28 +160,34 @@ export default function Checkout() {
 
   // Countdown timer
   useEffect(() => {
-    if (timeLeft <= 0) {
-      setTimerExpired(true);
-      return;
-    }
-
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          setTimerExpired(true);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const expirationTime = localStorage.getItem('checkout-expiration');
+      if (!expirationTime) {
+        setTimerExpired(true);
+        return;
+      }
+
+      const remaining = Math.floor((parseInt(expirationTime) - Date.now()) / 1000);
+      
+      if (remaining <= 0) {
+        setTimeLeft(0);
+        setTimerExpired(true);
+        localStorage.removeItem('checkout-expiration');
+        localStorage.removeItem('checkout-reserva-id');
+      } else {
+        setTimeLeft(remaining);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, []); // Solo ejecutar una vez al montar el componente
 
   // Redirigir cuando expira el timer
   useEffect(() => {
     if (timerExpired && !procesando && !success) {
       liberarTodasLasReservas();
+      localStorage.removeItem('checkout-expiration');
+      localStorage.removeItem('checkout-reserva-id');
       alert('⏰ Tu reserva ha expirado. Las entradas han sido liberadas.');
       sessionStorage.removeItem('checkout-data');
       navigate('/');
@@ -227,6 +257,8 @@ export default function Checkout() {
     setLoading(true);
     await liberarTodasLasReservas();
     sessionStorage.removeItem('checkout-data');
+    localStorage.removeItem('checkout-expiration');
+    localStorage.removeItem('checkout-reserva-id');
     navigate('/');
   };
 
@@ -281,8 +313,8 @@ export default function Checkout() {
           usuarioId: user.id,
           tipoEntradaId: item.tipoEntradaId,
           cantidad: item.cantidad,
-          reservaId: reserva.id, // Pasar el ID de la reserva al orchestrator
-          idempotencyKey: idempotencyKey, // NEW: For idempotent payments
+          reservaId: reserva.id, 
+          idempotencyKey: idempotencyKey, 
           paymentMethod: {
             cardNumber: simularRechazo ? "4111111111110000" : cardNumber.replace(/\s/g, ''),
             cardHolder: simularRechazo ? `${user.nombre} ${user.apellido}` : cardHolder,
@@ -302,6 +334,8 @@ export default function Checkout() {
       // Éxito
       setSuccess(true);
       sessionStorage.removeItem('checkout-data');
+      localStorage.removeItem('checkout-expiration');
+      localStorage.removeItem('checkout-reserva-id');
       
       // Redirigir a Mis Tickets después de 2 segundos
       setTimeout(() => {
@@ -323,7 +357,7 @@ export default function Checkout() {
   if (!checkoutData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-black"></div>
       </div>
     );
   }
@@ -337,7 +371,7 @@ export default function Checkout() {
           <p className="text-gray-600 mb-6">
             Tu pago ha sido procesado correctamente. Redirigiendo a tus tickets...
           </p>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
         </div>
       </div>
     );
@@ -376,48 +410,41 @@ export default function Checkout() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Countdown Timer - Fijo en la parte superior */}
-        <div className={`mb-6 rounded-lg p-4 shadow-md ${
+        <div className={`mb-4 rounded-lg p-3 shadow-md ${
           timeLeft < 60 ? 'bg-red-100 border-2 border-red-500 animate-pulse' : 
           timeLeft < 180 ? 'bg-yellow-100 border-2 border-yellow-500' : 
-          'bg-blue-100 border-2 border-blue-500'
+          'bg-teal-100 border-2 border-teal-500'
         }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <ClockIcon className={`h-8 w-8 mr-3 ${
+              <ClockIcon className={`h-5 w-5 mr-2 ${
                 timeLeft < 60 ? 'text-red-600' : 
                 timeLeft < 180 ? 'text-yellow-600' : 
-                'text-blue-600'
+                'text-teal-600'
               }`} />
               <div>
-                <h3 className={`font-bold text-lg ${
+                <h3 className={`font-semibold text-sm ${
                   timeLeft < 60 ? 'text-red-900' : 
                   timeLeft < 180 ? 'text-yellow-900' : 
-                  'text-blue-900'
+                  'text-teal-900'
                 }`}>
                   Tiempo para completar tu compra
                 </h3>
-                <p className={`text-sm ${
-                  timeLeft < 60 ? 'text-red-700' : 
-                  timeLeft < 180 ? 'text-yellow-700' : 
-                  'text-blue-700'
-                }`}>
-                  Tu reserva expira en {formatTime(timeLeft)}
-                </p>
               </div>
             </div>
-            <div className={`text-5xl font-mono font-bold ${
+            <div className={`text-2xl font-mono font-bold ${
               timeLeft < 60 ? 'text-red-700' : 
               timeLeft < 180 ? 'text-yellow-700' : 
-              'text-blue-700'
+              'text-teal-700'
             }`}>
               {formatTime(timeLeft)}
             </div>
           </div>
           {timeLeft < 180 && (
-            <div className={`mt-3 text-sm ${
+            <div className={`mt-2 text-xs ${
               timeLeft < 60 ? 'text-red-800' : 'text-yellow-800'
             }`}>
-              ⚠️ {timeLeft < 60 ? '¡Apúrate! Menos de 1 minuto restante.' : 'Por favor completa tu pago pronto. Las entradas serán liberadas si expira el tiempo.'}
+              ⚠️ {timeLeft < 60 ? '¡Apúrate! Menos de 1 minuto restante.' : 'Completa tu pago pronto. Las entradas serán liberadas si expira el tiempo.'}
             </div>
           )}
         </div>
@@ -433,11 +460,11 @@ export default function Checkout() {
             {/* Información del Evento */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <ShoppingCartIcon className="h-6 w-6 mr-2 text-primary-600" />
+                <ShoppingCartIcon className="h-6 w-6 mr-2 text-teal-600" />
                 Resumen de la Orden
               </h2>
               
-              <div className="bg-gradient-to-r from-primary-50 to-purple-50 rounded-lg p-4 mb-4">
+              <div className="bg-gradient-to-r from-teal-50 to-teal-100 rounded-lg p-4 mb-4">
                 <h3 className="text-lg font-bold text-gray-900">{checkoutData.evento.nombre}</h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {new Date(checkoutData.evento.fechaEvento).toLocaleDateString('es-PE', {
@@ -470,7 +497,7 @@ export default function Checkout() {
             {/* Método de Pago */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <CreditCardIcon className="h-6 w-6 mr-2 text-primary-600" />
+                <CreditCardIcon className="h-6 w-6 mr-2 text-teal-600" />
                 Información de Pago
               </h2>
 
@@ -510,7 +537,7 @@ export default function Checkout() {
                         placeholder="1234 5678 9012 3456"
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
                           focusedInput === 'number' 
-                            ? 'border-primary-500 ring-2 ring-primary-200' 
+                            ? 'border-teal-500 ring-2 ring-teal-200' 
                             : cardNumber && cardNumber.replace(/\s/g, '').length >= 13
                             ? 'border-green-500 bg-green-50'
                             : 'border-gray-300'
@@ -547,7 +574,7 @@ export default function Checkout() {
                       placeholder="Nombre"
                       className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all uppercase ${
                         focusedInput === 'name' 
-                          ? 'border-primary-500 ring-2 ring-primary-200' 
+                          ? 'border-teal-500 ring-2 ring-teal-200' 
                           : cardHolder && cardHolder.length >= 3
                           ? 'border-green-500 bg-green-50'
                           : 'border-gray-300'
@@ -570,7 +597,7 @@ export default function Checkout() {
                         placeholder="MM/YY"
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
                           focusedInput === 'expiry' 
-                            ? 'border-primary-500 ring-2 ring-primary-200' 
+                            ? 'border-teal-500 ring-2 ring-teal-200' 
                             : expiryDate && expiryDate.length === 5
                             ? 'border-green-500 bg-green-50'
                             : 'border-gray-300'
@@ -591,7 +618,7 @@ export default function Checkout() {
                         placeholder="123"
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
                           focusedInput === 'cvv' 
-                            ? 'border-primary-500 ring-2 ring-primary-200' 
+                            ? 'border-teal-500 ring-2 ring-teal-200' 
                             : cvv && cvv.length >= 3
                             ? 'border-green-500 bg-green-50'
                             : 'border-gray-300'
@@ -601,8 +628,8 @@ export default function Checkout() {
                   </div>
 
                   {/* Nota de Seguridad */}
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3 mt-4">
-                    <p className="text-xs text-blue-800 flex items-start">
+                  <div className="bg-gradient-to-r from-teal-50 to-teal-100 border border-teal-200 rounded-lg p-3 mt-4">
+                    <p className="text-xs text-teal-800 flex items-start">
                       <LockClosedIcon className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
                       <span>
                         No almacenamos información de tarjetas de crédito.
@@ -611,8 +638,8 @@ export default function Checkout() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-blue-800 text-sm flex items-start">
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                  <p className="text-teal-800 text-sm flex items-start">
                     <ClockIcon className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
                     <span>
                       El formulario de pago está deshabilitado. 
@@ -629,7 +656,7 @@ export default function Checkout() {
                     type="checkbox"
                     checked={simularRechazo}
                     onChange={(e) => setSimularRechazo(e.target.checked)}
-                    className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    className="mt-1 h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
                   />
                   <div className="ml-3">
                     <p className="text-xs text-yellow-700 mt-1">
@@ -661,7 +688,7 @@ export default function Checkout() {
 
               <div className="flex justify-between mb-6">
                 <span className="text-xl font-bold text-gray-900">Total</span>
-                <span className="text-2xl font-bold text-primary-600">
+                <span className="text-2xl font-bold text-teal-600">
                   S/ {checkoutData.total.toFixed(2)}
                 </span>
               </div>
@@ -678,7 +705,7 @@ export default function Checkout() {
               <button
                 onClick={handleProcesarPago}
                 disabled={procesando}
-                className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold text-lg shadow-lg hover:shadow-xl"
+                className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold text-lg shadow-lg hover:shadow-xl"
               >
                 {procesando ? (
                   <span className="flex items-center justify-center">

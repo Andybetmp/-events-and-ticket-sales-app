@@ -1,12 +1,12 @@
-package com.example.userservice.config;
+package com.example.camunda.config;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -14,22 +14,22 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.List;
 
-// TEMPORALMENTE DESHABILITADO PARA DESARROLLO
-//@Component
-@Order(1) // Ejecutar antes que otros filtros
+@Component
+@Order(1)
 public class GatewayAuthFilter implements Filter {
 
     @Value("${gateway.secret}")
     private String gatewaySecret;
     
-    @Value("${gateway.validation.enabled:false}")
+    @Value("${gateway.validation.enabled:true}")
     private boolean validationEnabled;
 
     private static final List<String> PUBLIC_PATHS = List.of(
         "/swagger-ui",
         "/v3/api-docs",
         "/api-docs",
-        "/h2-console"
+        "/actuator",
+        "/engine-rest" // Camunda REST API
     );
 
     @Override
@@ -42,13 +42,13 @@ public class GatewayAuthFilter implements Filter {
         String path = httpRequest.getRequestURI();
         String secret = httpRequest.getHeader("X-Gateway-Secret");
 
-        // Permitir Swagger y H2 Console (solo desarrollo)
+        // Permitir rutas públicas
         if (isPublicPath(path)) {
             chain.doFilter(request, response);
             return;
         }
         
-        // Si la validación está deshabilitada (modo desarrollo), permitir todas las peticiones
+        // Si la validación está deshabilitada, permitir todas las peticiones
         if (!validationEnabled) {
             chain.doFilter(request, response);
             return;
@@ -58,7 +58,7 @@ public class GatewayAuthFilter implements Filter {
         if (!gatewaySecret.equals(secret)) {
             sendForbiddenResponse(httpResponse,
                 "Acceso denegado. Debes acceder a través del API Gateway en el puerto 8080. " +
-                "URL correcta: http://localhost:8080" + path);
+                "Acceso directo al puerto 8083 no permitido.");
             return;
         }
 
@@ -66,16 +66,21 @@ public class GatewayAuthFilter implements Filter {
     }
 
     private boolean isPublicPath(String path) {
-        return PUBLIC_PATHS.stream().anyMatch(path::contains);
+        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 
-    private void sendForbiddenResponse(HttpServletResponse response, String message)
+    private void sendForbiddenResponse(HttpServletResponse response, String message) 
             throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(
-            String.format("{\"error\":\"%s\",\"status\":403}", message)
+        
+        String jsonResponse = String.format(
+            "{\"timestamp\":\"%s\",\"status\":403,\"error\":\"Forbidden\",\"message\":\"%s\"}",
+            java.time.Instant.now().toString(),
+            message
         );
+        
+        response.getWriter().write(jsonResponse);
     }
 }

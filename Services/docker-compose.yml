@@ -20,6 +20,7 @@ version: '3.8'
 #   - Notification Service (8085): Envío de emails
 #   - Ticket Service (8086): Gestión de tickets
 #   - Image Service (8087): Gestión de imágenes
+#   - Frontend (80): Aplicación React SPA
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
@@ -232,6 +233,22 @@ services:
       - notification-service
       - ticket-service
       - image-service
+    networks:
+      - soa-network
+    restart: on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Frontend - React SPA con Nginx (Puerto 80)
+  # ─────────────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: soa-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
     networks:
       - soa-network
     restart: on-failure

@@ -38,7 +38,7 @@ export default function EditarEvento() {
   const [tiposEntrada, setTiposEntrada] = useState([]);
   const [evento, setEvento] = useState(null);
 
-  const categorias = ['Musica', 'Deportes', 'Teatro', 'Concierto', 'Festival', 'Otro'];
+  const categorias = ['Musica', 'Deporte', 'Teatro', 'Concierto', 'Festival', 'Otro'];
   const estados = ['ACTIVO', 'CANCELADO', 'FINALIZADO'];
 
   useEffect(() => {
@@ -229,7 +229,7 @@ export default function EditarEvento() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-black"></div>
       </div>
     );
   }
@@ -243,7 +243,7 @@ export default function EditarEvento() {
           <p className="text-gray-600 mb-6">
             Los cambios se han guardado exitosamente. Redirigiendo...
           </p>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
         </div>
       </div>
     );
@@ -298,7 +298,7 @@ export default function EditarEvento() {
                     value={formData.nombre}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Ej: Concierto de Rock 2024"
                   />
                 </div>
@@ -317,7 +317,7 @@ export default function EditarEvento() {
                     value={formData.descripcion}
                     onChange={handleInputChange}
                     rows="4"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Describe tu evento..."
                   />
                 </div>
@@ -338,7 +338,7 @@ export default function EditarEvento() {
                       value={formData.fechaEvento}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -356,7 +356,7 @@ export default function EditarEvento() {
                       value={formData.ubicacion}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       placeholder="Ej: Estadio Nacional, Lima"
                     />
                   </div>
@@ -376,7 +376,7 @@ export default function EditarEvento() {
                       name="categoria"
                       value={formData.categoria}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     >
                       {categorias.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
@@ -394,7 +394,7 @@ export default function EditarEvento() {
                     name="estado"
                     value={formData.estado}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
                     {estados.map(est => (
                       <option key={est} value={est}>{est}</option>
@@ -494,7 +494,7 @@ export default function EditarEvento() {
             <button
               type="submit"
               disabled={saving || uploadingImage}
-              className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {uploadingImage ? 'Subiendo imagen...' : saving ? 'Guardando...' : 'Guardar Cambios'}
             </button>

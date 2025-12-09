@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +38,10 @@ public class OrchestrationController {
             Map<String, Object> response = userRegistrationOrchestrator.orchestrateRegistration(userData);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("exitoso", false);
+            errorResponse.put("mensaje", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 
