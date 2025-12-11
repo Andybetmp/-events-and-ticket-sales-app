@@ -38,11 +38,13 @@ spring:
               - PUT
               - DELETE
               - OPTIONS
+              - PATCH
             allowedHeaders: "*"
             allowCredentials: true
             maxAge: 3600
             exposedHeaders:
               - Authorization
+              - Content-Type
       
       routes:
         # User Service Routes
